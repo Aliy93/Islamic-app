@@ -33,11 +33,15 @@ export default function Home() {
   today.setHours(0, 0, 0, 0);
 
   const upcomingEvents = islamicEvents.filter(event => {
-    const eventDate = new Date(1445, event.month -1, event.day);
     // This is not a perfect conversion, but for filtering it's okay for now
     // A proper Hijri to Gregorian conversion would be needed for accuracy
-    const approxGregorian = new Date(2024, event.month - 1, event.day);
+    const hijriYear = new Date().toLocaleDateString('en-u-ca-islamic-umalqura', {year: 'numeric'});
+    const approxGregorian = new Date(parseInt(hijriYear), event.month - 1, event.day);
     return approxGregorian >= today;
+  }).sort((a,b) => {
+    const dateA = new Date(2024, a.month -1, a.day);
+    const dateB = new Date(2024, b.month-1, b.day);
+    return dateA.getTime() - dateB.getTime();
   });
 
   const toggleLang = () => {
@@ -65,8 +69,8 @@ export default function Home() {
   const t = translations[lang];
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="max-w-md mx-auto bg-white dark:bg-black shadow-lg">
+    <div className="min-h-screen" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      <div>
         <header className="bg-primary text-primary-foreground p-4 flex items-center justify-between">
           <Button variant="ghost" size="icon" className="hover:bg-primary/80">
             <Menu />
@@ -110,7 +114,7 @@ export default function Home() {
                         <p className="font-semibold text-foreground">{lang === 'ar' ? event.nameAr : event.name}</p>
                         <p className="text-sm text-muted-foreground">{event.day} {getHijriMonthName(event.month)} 1445</p>
                       </div>
-                      <span className="text-sm font-medium text-primary">{format(new Date(2024, event.month - 1, event.day), "dd MMMM yyyy", { locale: lang === 'ar' ? arSA : undefined })}</span>
+                      <span className="text-sm font-medium text-primary">{format(new Date(2024, event.month - 1, event.day), "dd MMMM", { locale: lang === 'ar' ? arSA : undefined })}</span>
                     </li>
                   ))}
                 </ul>
