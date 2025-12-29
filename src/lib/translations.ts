@@ -16,7 +16,10 @@ export const translations = {
       Asr: 'Asr',
       Maghrib: 'Maghrib',
       Isha: 'Isha',
-    }
+    },
+    nextPrayer: "Next Prayer",
+    timeUntil: "Time Until",
+    loading: "Loading..."
   },
   ar: {
     title: "تطبيق مسلم",
@@ -35,6 +38,9 @@ export const translations = {
       Asr: 'العصر',
       Maghrib: 'المغرب',
       Isha: 'العشاء',
-    }
+    },
+    nextPrayer: "الصلاة التالية",
+    timeUntil: "الوقت المتبقي",
+    loading: "تحميل..."
   }
 };
