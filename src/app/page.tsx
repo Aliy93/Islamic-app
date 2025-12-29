@@ -37,10 +37,10 @@ export default function Home() {
 
         <main className="p-4">
           <div className="bg-primary text-primary-foreground rounded-lg p-4 grid grid-cols-4 gap-4 text-center mb-4">
-             <a href="https://qiblafinder.withgoogle.com/" target="_blank" rel="noopener noreferrer" className="flex flex-col h-auto items-center justify-center gap-1.5 p-2 rounded-lg hover:bg-primary/80 text-primary-foreground no-underline">
+             <Link href="/qibla" passHref className="flex flex-col h-auto items-center justify-center gap-1.5 p-2 rounded-lg hover:bg-primary/80 text-primary-foreground no-underline">
               <Compass className="w-6 h-6" />
               <span className="text-xs mt-1">Qibla</span>
-            </a>
+            </Link>
             <Button variant="ghost" className="flex flex-col h-auto items-center hover:bg-primary/80">
               <CalendarDays className="w-6 h-6" />
                <span className="text-xs mt-1">Prayer</span>
