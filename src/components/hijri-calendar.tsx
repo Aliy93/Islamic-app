@@ -123,13 +123,13 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
                   { 'border border-primary': day.event }
                 )}>
                   <span className={cn(
-                      'font-medium text-sm'
+                      'font-bold text-sm'
                   )}>
-                    {format(day.gregorian, 'd')}
+                    {day.isCurrentMonth ? day.hijri.day : ''}
                   </span>
                 </div>
-                <span className="text-[10px] text-muted-foreground">
-                    {day.isCurrentMonth ? day.hijri.day : ''}
+                 <span className="text-[10px] text-muted-foreground">
+                    {format(day.gregorian, 'd')}
                 </span>
                 {day.event && day.isCurrentMonth && (
                     <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-green-500 rounded-full"></div>
