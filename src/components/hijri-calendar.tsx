@@ -50,6 +50,10 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
     const nextMonthGregorian = getGregorianDateFromHijri(month === 12 ? year + 1 : year, month === 12 ? 1 : month + 1, 1, hijriAdjustment);
     const daysInMonth = Math.round((nextMonthGregorian.getTime() - firstDayOfHijriMonthGregorian.getTime()) / (1000 * 60 * 60 * 24));
 
+    if (daysInMonth < 28 || daysInMonth > 31) { // Basic validation
+      return [];
+    }
+
     // 3. Generate all days of the current Hijri month
     const monthDays: CalendarDay[] = Array.from({ length: daysInMonth }, (_, i) => {
       const dayNumber = i + 1;
@@ -123,29 +127,33 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
     const firstEventInView = calendarGrid
       .flat()
       .find(day => day.isCurrentMonth && day.event);
-    setSelectedDay(firstEventInView || null);
-  }, [calendarGrid]);
+    
+    if (selectedDay === null || (firstEventInView && selectedDay?.event?.name !== firstEventInView.event?.name)) {
+        setSelectedDay(firstEventInView || null);
+    } else if (!firstEventInView) {
+        setSelectedDay(null);
+    }
+
+  }, [calendarGrid, selectedDay]);
 
   const handlePrevMonth = () => {
     setCurrentHijriDate(prev => {
         if (prev.month === 1) return { year: prev.year - 1, month: 12 };
         return { ...prev, month: prev.month - 1 };
     });
-    setSelectedDay(null);
+    setSelectedDay(null); // Reset selection when changing months
   }
   const handleNextMonth = () => {
     setCurrentHijriDate(prev => {
         if (prev.month === 12) return { year: prev.year + 1, month: 1 };
         return { ...prev, month: prev.month + 1 };
     });
-    setSelectedDay(null);
+    setSelectedDay(null); // Reset selection when changing months
   }
 
   const handleDayClick = (day: CalendarDay) => {
     if (day.event) {
         setSelectedDay(day);
-    } else {
-        setSelectedDay(null);
     }
   }
 
