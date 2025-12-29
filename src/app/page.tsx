@@ -12,6 +12,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PrayerTimes from '@/components/prayer-times';
 import { toArabicNumerals } from '@/lib/utils';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 type PrayerTimesData = {
   Fajr: string;
@@ -36,11 +37,10 @@ type CachedPrayerData = {
 
 export default function Home() {
   const { lang } = useLanguage();
-  const { prayerMethod } = useSettings();
+  const { prayerMethod, location, locationError } = useSettings();
   const t = translations[lang];
 
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [nextPrayer, setNextPrayer] = useState<Prayer | null>(null);
   const [timeToNextPrayer, setTimeToNextPrayer] = useState('');
@@ -48,34 +48,10 @@ export default function Home() {
   const hijriDate = getHijriDate(currentDate);
 
   useEffect(() => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const cachedDataStr = localStorage.getItem('prayerData');
-
-    if (cachedDataStr) {
-      const cachedData: CachedPrayerData = JSON.parse(cachedDataStr);
-      if (cachedData.date === todayStr && cachedData.location) {
-        setLocation(cachedData.location);
-        return;
-      }
+    if (locationError) {
+      setError(locationError);
     }
-
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newLocation = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
-          setLocation(newLocation);
-        },
-        (err) => {
-          setError(t.locationError);
-        }
-      );
-    } else {
-      setError(t.geolocationNotSupported);
-    }
-  }, [t.locationError, t.geolocationNotSupported]);
+  }, [locationError])
 
   useEffect(() => {
     if (!location) return;
@@ -144,7 +120,12 @@ export default function Home() {
     }
     
     const interval = setInterval(() => {
-        const prayerSchedule: Prayer[] = (Object.entries(JSON.parse(localStorage.getItem('prayerData') || '{}')?.timings || {}) as [keyof PrayerTimesData, string][])
+        const prayerDataStr = localStorage.getItem('prayerData');
+        if (!prayerDataStr) return;
+        const timings = JSON.parse(prayerDataStr)?.timings;
+        if (!timings) return;
+        
+        const prayerSchedule: Prayer[] = (Object.entries(timings) as [keyof PrayerTimesData, string][])
             .filter(([key]) => ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].includes(key))
             .map(([name, time]) => ({ name, time }));
         if (prayerSchedule.length > 0) findNextPrayer(prayerSchedule)
@@ -220,8 +201,15 @@ export default function Home() {
         </div>
         
         {error && <p className="text-destructive text-center">{error}</p>}
+        
+        {!location && !locationError && (
+             <Alert>
+                <AlertTitle>{t.locationNeeded}</AlertTitle>
+                <AlertDescription>{t.locationNeededMsg}</AlertDescription>
+            </Alert>
+        )}
 
-        <PrayerTimes currentDate={currentDate} location={location} nextPrayerName={nextPrayer?.name} />
+        <PrayerTimes currentDate={currentDate} nextPrayerName={nextPrayer?.name} />
     </div>
   );
 }

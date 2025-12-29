@@ -41,52 +41,39 @@ const prayerIcons: Record<keyof PrayerTimesData, React.ReactNode> = {
 
 interface PrayerTimesProps {
     currentDate?: Date;
-    location?: { latitude: number; longitude: number } | null;
     nextPrayerName?: string;
 }
 
-export default function PrayerTimes({ currentDate: initialDate, location: initialLocation, nextPrayerName }: PrayerTimesProps) {
+export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }: PrayerTimesProps) {
   const { lang } = useLanguage();
-  const { prayerMethod } = useSettings();
+  const { prayerMethod, location } = useSettings();
   const t = translations[lang];
 
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(initialDate || new Date());
-  const [location, setLocation] = useState(initialLocation);
 
   useEffect(() => {
     setCurrentDate(initialDate || new Date());
   }, [initialDate]);
-  
-  useEffect(() => {
-    if (initialLocation) {
-        setLocation(initialLocation);
-    } else {
-        const cachedDataStr = localStorage.getItem('prayerData');
-        if (cachedDataStr) {
-            const cachedData: CachedPrayerData = JSON.parse(cachedDataStr);
-            setLocation(cachedData.location);
-        }
-    }
-  }, [initialLocation]);
 
   useEffect(() => {
-    const todayStr = format(currentDate, 'yyyy-MM-dd');
+    if (!location) {
+      setLoading(true); // Keep loading if no location
+      return;
+    }
+    
+    const dateStr = format(currentDate, 'yyyy-MM-dd');
+
     const cachedDataStr = localStorage.getItem('prayerData');
     if (cachedDataStr) {
         const cachedData: CachedPrayerData = JSON.parse(cachedDataStr);
-        if(cachedData.date === todayStr && cachedData.method === prayerMethod) {
+        if(cachedData.date === dateStr && cachedData.method === prayerMethod && cachedData.location.latitude === location.latitude && cachedData.location.longitude === location.longitude) {
             setPrayerTimes(cachedData.timings);
             setLoading(false);
             return;
         }
-    }
-
-    if (!location) {
-      setLoading(false);
-      return;
     }
   
     const fetchPrayerTimes = async () => {
@@ -101,7 +88,7 @@ export default function PrayerTimes({ currentDate: initialDate, location: initia
           setPrayerTimes(data.data.timings);
           const newCachedData: CachedPrayerData = {
               timings: data.data.timings,
-              date: format(currentDate, 'yyyy-MM-dd'),
+              date: dateStr,
               location: location,
               method: prayerMethod
           };

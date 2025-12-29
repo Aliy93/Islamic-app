@@ -7,7 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Globe, CalendarDays, BookOpen } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Globe, CalendarDays, BookOpen, MapPin } from 'lucide-react';
 
 const prayerCalculationMethods = [
   { value: 1, name: 'ISNA (North America)' },
@@ -21,7 +23,13 @@ const prayerCalculationMethods = [
 
 export default function SettingsPage() {
   const { lang, toggleLang } = useLanguage();
-  const { prayerMethod, setPrayerMethod, hijriAdjustment, setHijriAdjustment } = useSettings();
+  const { 
+    prayerMethod, setPrayerMethod, 
+    hijriAdjustment, setHijriAdjustment,
+    location, setLocation,
+    isManualLocation, setIsManualLocation,
+    fetchAndSetLocation 
+  } = useSettings();
   const t = translations[lang];
 
   return (
@@ -46,6 +54,58 @@ export default function SettingsPage() {
               {lang === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="w-5 h-5" />
+            {t.location}
+          </CardTitle>
+           <CardDescription>{t.locationDescription}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="manual-location-switch" className="text-base">
+              {t.manualLocation}
+            </Label>
+            <Switch
+              id="manual-location-switch"
+              checked={isManualLocation}
+              onCheckedChange={setIsManualLocation}
+            />
+          </div>
+          {isManualLocation ? (
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label htmlFor="latitude">{t.latitude}</Label>
+                  <Input
+                    id="latitude"
+                    type="number"
+                    value={location?.latitude ?? ''}
+                    onChange={(e) => setLocation({ ...location, latitude: parseFloat(e.target.value) || 0, longitude: location?.longitude ?? 0 })}
+                    placeholder="e.g. 34.0522"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="longitude">{t.longitude}</Label>
+                  <Input
+                    id="longitude"
+                    type="number"
+                    value={location?.longitude ?? ''}
+                    onChange={(e) => setLocation({ ...location, latitude: location?.latitude ?? 0, longitude: parseFloat(e.target.value) || 0 })}
+                    placeholder="e.g. -118.2437"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <Button onClick={fetchAndSetLocation} className="w-full">
+              {t.useCurrentLocation}
+            </Button>
+          )}
         </CardContent>
       </Card>
 

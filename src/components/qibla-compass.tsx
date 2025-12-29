@@ -3,14 +3,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { Compass } from 'lucide-react';
 import { calculateQiblaDirection } from '@/lib/qibla';
 import { useLanguage } from '@/context/language-context';
+import { useSettings } from '@/context/settings-context';
 import { translations } from '@/lib/translations';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { toArabicNumerals } from '@/lib/utils';
+import { Skeleton } from './ui/skeleton';
 
 export default function QiblaCompass() {
   const { lang } = useLanguage();
   const t = translations[lang];
+  const { location, locationError: settingsLocationError, fetchAndSetLocation } = useSettings();
 
   const [qiblaDirection, setQiblaDirection] = useState<number>(0);
   const [heading, setHeading] = useState<number | null>(null);
@@ -18,14 +21,13 @@ export default function QiblaCompass() {
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
 
   const handleOrientation = useCallback((event: DeviceOrientationEvent) => {
-    // webkitCompassHeading is for iOS
     const compassHeading = (event as any).webkitCompassHeading || event.alpha;
     if (compassHeading !== null) {
       setHeading(compassHeading);
     }
   }, []);
 
-  const requestPermission = () => {
+  const requestPermission = useCallback(() => {
     if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
       (DeviceOrientationEvent as any).requestPermission()
         .then((permissionState: 'granted' | 'denied' | 'prompt') => {
@@ -38,36 +40,32 @@ export default function QiblaCompass() {
         })
         .catch(console.error);
     } else {
-      // For non-iOS 13+ browsers
+      // For non-iOS 13+ browsers that don't require explicit permission
       setPermissionGranted(true);
       window.addEventListener('deviceorientation', handleOrientation);
     }
-  };
+  }, [handleOrientation]);
 
   useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const qibla = calculateQiblaDirection(latitude, longitude);
-          setQiblaDirection(qibla);
-          setLocationError(null);
-        },
-        (error) => {
-          setLocationError(t.locationError);
-        }
-      );
-    } else {
-      setLocationError(t.geolocationNotSupported);
-    }
-    
-    // Auto-request permission on component mount
+    fetchAndSetLocation(); // Always fetch fresh location for Qibla
     requestPermission();
 
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation);
     };
-  }, [t.locationError, t.geolocationNotSupported, handleOrientation]);
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (settingsLocationError) {
+      setLocationError(settingsLocationError);
+    } else if (location) {
+      const qibla = calculateQiblaDirection(location.latitude, location.longitude);
+      setQiblaDirection(qibla);
+      setLocationError(null);
+    }
+  }, [location, settingsLocationError]);
+
 
   const compassRotation = heading !== null ? 360 - heading : 0;
   const qiblaPointerRotation = heading !== null ? qiblaDirection - heading : qiblaDirection;
@@ -91,11 +89,23 @@ export default function QiblaCompass() {
     )
   }
 
-  if (permissionGranted === null) {
+  if (permissionGranted === null || heading === null) {
       return (
-        <div className="text-center space-y-4 p-4">
-            <p className="font-body">Please grant permission to access device orientation for the compass to work.</p>
-            <Button onClick={requestPermission}>Grant Permission</Button>
+        <div className="flex flex-col items-center justify-center space-y-4 text-center">
+            <Skeleton className="w-64 h-64 rounded-full" />
+            <div className="space-y-2">
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-10 w-24 mx-auto" />
+            </div>
+            {permissionGranted === null && (
+                 <div className="text-center space-y-4 p-4">
+                    <p className="font-body">{t.permissionNeeded}</p>
+                    <Button onClick={requestPermission}>{t.grantPermission}</Button>
+                </div>
+            )}
+            {permissionGranted === true && heading === null && (
+                <p className="font-body animate-pulse">{t.calibrating}</p>
+            )}
         </div>
       )
   }

@@ -27,7 +27,7 @@ export const translations = {
     geolocationNotSupported: "Geolocation is not supported by your browser.",
     fetchError: "Failed to fetch prayer times.",
     locationNeeded: "Location Needed",
-    locationNeededMsg: "Please enable location services to see prayer times.",
+    locationNeededMsg: "Please enable location services or set it manually in settings.",
     home: "Home",
     language: "Language",
     prayerCalculation: "Prayer Calculation",
@@ -35,7 +35,17 @@ export const translations = {
     hijriAdjustment: "Hijri Calendar Adjustment",
     hijriAdjustmentDescription: "Adjust the Hijri date by a day to match local moon sightings.",
     day: "Day",
-    default: "Default"
+    default: "Default",
+    location: "Location",
+    locationDescription: "Set your location automatically or enter it manually.",
+    manualLocation: "Manual Location Input",
+    latitude: "Latitude",
+    longitude: "Longitude",
+    useCurrentLocation: "Use Current Location",
+    permissionNeeded: "Please grant permission to access device orientation for the compass to work.",
+    grantPermission: "Grant Permission",
+    calibrating: "Calibrating compass... Please move your device in a figure-eight pattern.",
+
   },
   ar: {
     title: "تطبيق مسلم",
@@ -64,7 +74,7 @@ export const translations = {
     geolocationNotSupported: "الموقع الجغرافي غير مدعوم من قبل متصفحك.",
     fetchError: "فشل في جلب أوقات الصلاة.",
     locationNeeded: "الموقع مطلوب",
-    locationNeededMsg: "يرجى تفعيل خدمات الموقع لرؤية أوقات الصلاة.",
+    locationNeededMsg: "يرجى تفعيل خدمات الموقع أو ضبطه يدويًا في الإعدادات.",
     home: "الرئيسية",
     language: "اللغة",
     prayerCalculation: "حساب الصلاة",
@@ -72,6 +82,15 @@ export const translations = {
     hijriAdjustment: "تعديل التقويم الهجري",
     hijriAdjustmentDescription: "عدّل التاريخ الهجري بيوم واحد ليتوافق مع رؤية الهلال المحلية.",
     day: "يوم",
-    default: "افتراضي"
+    default: "افتراضي",
+    location: "الموقع",
+    locationDescription: "اضبط موقعك تلقائيًا أو أدخله يدويًا.",
+    manualLocation: "إدخال الموقع يدويًا",
+    latitude: "خط العرض",
+    longitude: "خط الطول",
+    useCurrentLocation: "استخدام الموقع الحالي",
+    permissionNeeded: "يرجى منح الإذن للوصول إلى اتجاه الجهاز حتى تعمل البوصلة.",
+    grantPermission: "منح الإذن",
+    calibrating: "جارٍ معايرة البوصلة... يرجى تحريك جهازك على شكل الرقم ثمانية.",
   }
 };
