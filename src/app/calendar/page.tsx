@@ -21,9 +21,6 @@ export default function CalendarPage() {
     setCurrentHijriDate({ year: todayHijri.year, month: todayHijri.month });
   };
   
-  // Calculate the Gregorian date from the current Hijri view to pass to the header
-  const gregorianDateForHeader = getGregorianDateFromHijri(currentHijriDate.year, currentHijriDate.month, 1);
-
   return (
     <div className="min-h-screen flex flex-col" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <header className="bg-background text-foreground p-4 flex items-center justify-between gap-4 sticky top-0 z-10">
@@ -31,7 +28,6 @@ export default function CalendarPage() {
       </header>
       <main className="flex-grow p-4 space-y-4">
         <CalendarHeader 
-          currentDate={gregorianDateForHeader} 
           onTodayClick={handleSetToday} 
           lang={lang} 
         />

@@ -9,16 +9,16 @@ import { translations } from '@/lib/translations';
 import { Language } from '@/context/language-context';
 
 interface CalendarHeaderProps {
-  currentDate: Date;
   onTodayClick: () => void;
   lang: Language;
 }
 
-export default function CalendarHeader({ currentDate, onTodayClick, lang }: CalendarHeaderProps) {
+export default function CalendarHeader({ onTodayClick, lang }: CalendarHeaderProps) {
+  // Always use the current date
+  const currentDate = new Date(); 
   const hijriDate = getHijriDate(currentDate);
   const t = translations[lang];
 
-  // This will now reflect the first day of the viewed month
   const gregorianFullDate = format(currentDate, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : enUS });
 
   return (
@@ -28,11 +28,11 @@ export default function CalendarHeader({ currentDate, onTodayClick, lang }: Cale
         <div>
           <p className="font-bold text-foreground">
             {lang === 'ar'
-              ? `${hijriDate.monthNameAr} ${hijriDate.year} هـ`
-              : `${hijriDate.monthName} ${hijriDate.year} H`}
+              ? `${hijriDate.day} ${hijriDate.monthNameAr} ${hijriDate.year} هـ`
+              : `${hijriDate.monthName} ${hijriDate.day}, ${hijriDate.year} H`}
           </p>
           <p className="text-sm text-muted-foreground">
-            {gregorianFullDate}
+            {format(currentDate, 'eeee, d MMMM yyyy', { locale: lang === 'ar' ? arSA : enUS })}
           </p>
         </div>
       </div>
