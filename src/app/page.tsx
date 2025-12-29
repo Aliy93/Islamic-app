@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
 import { getHijriDate } from '@/lib/hijri';
 import { format, parse, addDays, differenceInSeconds } from 'date-fns';
-import { arSA } from 'date-fns/locale/ar-SA';
+import { arSA } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PrayerTimes from '@/components/prayer-times';

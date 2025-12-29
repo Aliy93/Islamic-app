@@ -1,3 +1,4 @@
+
 export const translations = {
   en: {
     title: "Muslim App",

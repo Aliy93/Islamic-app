@@ -14,7 +14,7 @@ import {
   endOfMonth,
   getDay,
 } from 'date-fns';
-import { arSA } from 'date-fns/locale/ar-SA';
+import { arSA, enUS } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getHijriDate, HijriDateInfo } from '@/lib/hijri';
@@ -122,7 +122,7 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
             {getHijriHeader()}
           </h2>
           <p className="text-sm text-muted-foreground">
-             {format(viewDate, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined })}
+             {format(viewDate, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : enUS })}
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={handleNextMonth} aria-label="Next month">
@@ -190,6 +190,9 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
                             ? `${selectedDay.hijri.monthNameAr} ${selectedDay.hijri.day}, ${selectedDay.hijri.year}`
                             : `${selectedDay.hijri.day} ${selectedDay.hijri.monthName}, ${selectedDay.hijri.year}`
                         }
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                        {format(selectedDay.gregorian, 'MMMM d, yyyy', { locale: lang === 'ar' ? arSA : enUS })}
                     </p>
                 </div>
             </div>
