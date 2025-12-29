@@ -10,7 +10,7 @@ export default function QiblaFinderPage() {
   const t = translations[lang];
 
   return (
-    <div className="min-h-screen flex flex-col" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="h-screen flex flex-col" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <header className="bg-primary text-primary-foreground p-4 flex items-center gap-4">
         <Link href="/" passHref>
           <Button variant="ghost" size="icon" className="hover:bg-primary/80">
