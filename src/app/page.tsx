@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Menu, Compass, CalendarDays, BookOpen, Calendar as CalendarIcon, Globe } from 'lucide-react';
 import HijriCalendar from '@/components/hijri-calendar';
 import { Button } from '@/components/ui/button';
@@ -9,9 +8,12 @@ import { islamicEvents } from '@/lib/islamic-events';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale/ar-SA';
 import Link from 'next/link';
+import { useLanguage } from '@/context/language-context';
+import { translations } from '@/lib/translations';
 
 export default function Home() {
-  const [lang, setLang] = useState<'en' | 'ar'>('en');
+  const { lang, toggleLang } = useLanguage();
+  const t = translations[lang];
 
   const getHijriMonthName = (month: number) => {
     const dateForMonth = new Date();
@@ -43,30 +45,6 @@ export default function Home() {
     const dateB = new Date(2024, b.month-1, b.day);
     return dateA.getTime() - dateB.getTime();
   });
-
-  const toggleLang = () => {
-    setLang(currentLang => currentLang === 'en' ? 'ar' : 'en');
-  }
-
-  const translations = {
-    en: {
-      title: "Muslim App",
-      qibla: "Qibla",
-      prayer: "Prayer",
-      quran: "Quran",
-      calendar: "Calendar",
-      upcomingHolidays: "Upcoming Holidays",
-    },
-    ar: {
-      title: "تطبيق مسلم",
-      qibla: "قبلة",
-      prayer: "صلاة",
-      quran: "قرآن",
-      calendar: "تقويم",
-      upcomingHolidays: "العطلات القادمة",
-    }
-  }
-  const t = translations[lang];
 
   return (
     <div className="min-h-screen" dir={lang === 'ar' ? 'rtl' : 'ltr'}>

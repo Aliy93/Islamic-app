@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { LanguageProvider } from '@/context/language-context';
 
 export const metadata: Metadata = {
   title: 'Muslim App',
@@ -20,10 +21,12 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500;700&family=Noto+Kufi+Arabic:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-sans antialiased bg-gray-100 dark:bg-gray-900">
-        <div className="max-w-md mx-auto bg-white dark:bg-black shadow-lg min-h-screen">
-          {children}
-        </div>
-        <Toaster />
+        <LanguageProvider>
+          <div className="max-w-md mx-auto bg-white dark:bg-black shadow-lg min-h-screen">
+            {children}
+          </div>
+          <Toaster />
+        </LanguageProvider>
       </body>
     </html>
   );
