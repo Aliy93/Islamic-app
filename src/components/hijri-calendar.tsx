@@ -128,10 +128,8 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
       .flat()
       .find(day => day.isCurrentMonth && day.event);
     
-    if (selectedDay === null || (firstEventInView && selectedDay?.event?.name !== firstEventInView.event?.name)) {
+    if (selectedDay === null || !calendarGrid.flat().some(d => d.event && d.gregorian.getTime() === selectedDay.gregorian.getTime())) {
         setSelectedDay(firstEventInView || null);
-    } else if (!firstEventInView) {
-        setSelectedDay(null);
     }
 
   }, [calendarGrid, selectedDay]);
