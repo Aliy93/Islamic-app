@@ -20,7 +20,6 @@ type PrayerTimesData = {
 type PrayerInfo = {
     name: keyof PrayerTimesData;
     begins: string;
-    jamaah: string;
 }
 
 const prayerIcons: Record<keyof PrayerTimesData, React.ReactNode> = {
@@ -105,13 +104,10 @@ export default function PrayerTimes({ currentDate = new Date(), location = null,
   const prayerSchedule: PrayerInfo[] = (Object.keys(prayerIcons) as Array<keyof PrayerTimesData>).map(name => {
     const time24 = prayerTimes[name];
     const beginsTime = parse(time24, 'HH:mm', new Date());
-    // Jama'ah is just an example, you might get this from an API or calculate it
-    const jamaahTime = new Date(beginsTime.getTime() + 10 * 60000); 
 
     return {
         name,
         begins: format(beginsTime, 'h:mm a'),
-        jamaah: format(jamaahTime, 'h:mm a'),
     }
   });
 
@@ -124,14 +120,9 @@ export default function PrayerTimes({ currentDate = new Date(), location = null,
                 prayer.name === nextPrayerName ? 'bg-primary text-primary-foreground' : 'bg-card'
             )}>
                 <div className="flex items-center gap-3">
-                    <Bell className="w-5 h-5 opacity-50" />
                     <div className="text-sm">
                         <p className="font-semibold">{t.prayers[prayer.name]?.begins || 'Begins'}</p>
-                        <p className="font-mono">{prayer.begins}</p>
-                    </div>
-                     <div className="text-sm">
-                        <p className="font-semibold">{t.prayers[prayer.name]?.jamaah || 'Jama\'ah'}</p>
-                        <p className="font-mono">{prayer.jamaah}</p>
+                        <p className="font-mono text-lg">{prayer.begins}</p>
                     </div>
                 </div>
                  <div className="flex items-center gap-3 text-right">
