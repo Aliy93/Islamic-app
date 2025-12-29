@@ -16,6 +16,8 @@ import { getEventForDate, IslamicEvent } from '@/lib/islamic-events';
 import { cn, toArabicNumerals } from '@/lib/utils';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Separator } from './ui/separator';
+import { useSettings } from '@/context/settings-context';
+
 
 type CalendarDay = {
   gregorian: Date;
@@ -31,15 +33,8 @@ interface HijriCalendarProps {
 }
 
 export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurrentHijriDate }: HijriCalendarProps) {
-  const [hijriAdjustment, setHijriAdjustment] = useState(0);
+  const { hijriAdjustment } = useSettings();
   const [monthlyEvents, setMonthlyEvents] = useState<CalendarDay[]>([]);
-
-  useEffect(() => {
-    const savedAdjustment = localStorage.getItem('hijriAdjustment');
-    if (savedAdjustment && [-1, 0, 1].includes(Number(savedAdjustment))) {
-      setHijriAdjustment(parseInt(savedAdjustment, 10));
-    }
-  }, []);
 
   const calendarGrid = useMemo((): CalendarDay[][] => {
     const { year, month } = currentHijriDate;
@@ -154,7 +149,7 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
 
   const getHijriHeader = () => {
       if (!firstDayInGrid) return "";
-      const hijriInfo = getHijriDate(getGregorianDateFromHijri(currentHijriDate.year, currentHijriDate.month, 1));
+      const hijriInfo = getHijriDate(getGregorianDateFromHijri(currentHijriDate.year, currentHijriDate.month, 1, hijriAdjustment), hijriAdjustment);
       return lang === 'ar'
           ? `${hijriInfo.monthNameAr} ${toArabicNumerals(hijriInfo.year)}`
           : `${hijriInfo.monthName} ${hijriInfo.year}`;

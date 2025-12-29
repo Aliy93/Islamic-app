@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Sun, Sunrise, Sunset, Moon } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import { useLanguage } from '@/context/language-context';
+import { useSettings } from '@/context/settings-context';
 import { translations } from '@/lib/translations';
 import { cn, toArabicNumerals } from '@/lib/utils';
 
@@ -26,6 +27,7 @@ type CachedPrayerData = {
     timings: PrayerTimesData;
     date: string;
     location: { latitude: number; longitude: number };
+    method: number;
 }
 
 const prayerIcons: Record<keyof PrayerTimesData, React.ReactNode> = {
@@ -45,6 +47,7 @@ interface PrayerTimesProps {
 
 export default function PrayerTimes({ currentDate: initialDate, location: initialLocation, nextPrayerName }: PrayerTimesProps) {
   const { lang } = useLanguage();
+  const { prayerMethod } = useSettings();
   const t = translations[lang];
 
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimesData | null>(null);
@@ -74,7 +77,7 @@ export default function PrayerTimes({ currentDate: initialDate, location: initia
     const cachedDataStr = localStorage.getItem('prayerData');
     if (cachedDataStr) {
         const cachedData: CachedPrayerData = JSON.parse(cachedDataStr);
-        if(cachedData.date === todayStr) {
+        if(cachedData.date === todayStr && cachedData.method === prayerMethod) {
             setPrayerTimes(cachedData.timings);
             setLoading(false);
             return;
@@ -90,7 +93,7 @@ export default function PrayerTimes({ currentDate: initialDate, location: initia
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(currentDate.getTime()/1000)}?latitude=${location.latitude}&longitude=${location.longitude}&method=2`);
+        const response = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(currentDate.getTime()/1000)}?latitude=${location.latitude}&longitude=${location.longitude}&method=${prayerMethod}`);
         if (!response.ok) throw new Error(t.fetchError);
         
         const data = await response.json();
@@ -100,6 +103,7 @@ export default function PrayerTimes({ currentDate: initialDate, location: initia
               timings: data.data.timings,
               date: format(currentDate, 'yyyy-MM-dd'),
               location: location,
+              method: prayerMethod
           };
           localStorage.setItem('prayerData', JSON.stringify(newCachedData));
         } else {
@@ -113,7 +117,7 @@ export default function PrayerTimes({ currentDate: initialDate, location: initia
     };
 
     fetchPrayerTimes();
-  }, [location, currentDate, t.fetchError]);
+  }, [location, currentDate, t.fetchError, prayerMethod]);
 
   if (loading) {
     return (

@@ -29,6 +29,13 @@ export const translations = {
     locationNeeded: "Location Needed",
     locationNeededMsg: "Please enable location services to see prayer times.",
     home: "Home",
+    language: "Language",
+    prayerCalculation: "Prayer Calculation",
+    prayerCalculationDescription: "Select the method for calculating prayer times based on your region.",
+    hijriAdjustment: "Hijri Calendar Adjustment",
+    hijriAdjustmentDescription: "Adjust the Hijri date by a day to match local moon sightings.",
+    day: "Day",
+    default: "Default"
   },
   ar: {
     title: "تطبيق مسلم",
@@ -59,5 +66,12 @@ export const translations = {
     locationNeeded: "الموقع مطلوب",
     locationNeededMsg: "يرجى تفعيل خدمات الموقع لرؤية أوقات الصلاة.",
     home: "الرئيسية",
+    language: "اللغة",
+    prayerCalculation: "حساب الصلاة",
+    prayerCalculationDescription: "اختر طريقة حساب أوقات الصلاة بناءً على منطقتك.",
+    hijriAdjustment: "تعديل التقويم الهجري",
+    hijriAdjustmentDescription: "عدّل التاريخ الهجري بيوم واحد ليتوافق مع رؤية الهلال المحلية.",
+    day: "يوم",
+    default: "افتراضي"
   }
 };

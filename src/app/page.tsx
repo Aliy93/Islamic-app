@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/context/language-context';
+import { useSettings } from '@/context/settings-context';
 import { translations } from '@/lib/translations';
 import { getHijriDate } from '@/lib/hijri';
 import { format, parse, addDays, differenceInSeconds } from 'date-fns';
@@ -30,10 +31,12 @@ type CachedPrayerData = {
     timings: PrayerTimesData;
     date: string;
     location: { latitude: number; longitude: number };
+    method: number;
 }
 
 export default function Home() {
   const { lang } = useLanguage();
+  const { prayerMethod } = useSettings();
   const t = translations[lang];
 
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -81,7 +84,7 @@ export default function Home() {
 
     const fetchPrayerTimes = async () => {
       try {
-        const response = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(currentDate.getTime()/1000)}?latitude=${location.latitude}&longitude=${location.longitude}&method=2`);
+        const response = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(currentDate.getTime()/1000)}?latitude=${location.latitude}&longitude=${location.longitude}&method=${prayerMethod}`);
         if (!response.ok) throw new Error(t.fetchError);
         
         const data = await response.json();
@@ -92,7 +95,8 @@ export default function Home() {
         const newCachedData: CachedPrayerData = {
             timings,
             date: todayStr,
-            location: location
+            location: location,
+            method: prayerMethod,
         };
         localStorage.setItem('prayerData', JSON.stringify(newCachedData));
         
@@ -127,7 +131,7 @@ export default function Home() {
     const cachedDataStr = localStorage.getItem('prayerData');
     if (cachedDataStr) {
         const cachedData: CachedPrayerData = JSON.parse(cachedDataStr);
-        if(cachedData.date === todayStr && cachedData.location.latitude === location.latitude && cachedData.location.longitude === location.longitude) {
+        if(cachedData.date === todayStr && cachedData.location.latitude === location.latitude && cachedData.location.longitude === location.longitude && cachedData.method === prayerMethod) {
             const prayerSchedule: Prayer[] = Object.entries(cachedData.timings)
                 .filter(([key]) => ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].includes(key))
                 .map(([name, time]) => ({ name: name as keyof PrayerTimesData, time }));
@@ -147,7 +151,7 @@ export default function Home() {
     }, 60000);
     return () => clearInterval(interval);
 
-  }, [location, currentDate, t.fetchError]);
+  }, [location, currentDate, t.fetchError, prayerMethod]);
 
   useEffect(() => {
     if (!nextPrayer) return;

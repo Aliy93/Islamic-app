@@ -19,6 +19,10 @@ const getHijriParts = (date: Date): Record<string, string> => {
     year: 'numeric',
     weekday: 'long',
   });
+  if (!date || isNaN(date.getTime())) {
+    // Return a default or handle the invalid date case
+    return { day: '1', month: '1', year: '1445', weekday: 'Unknown' };
+  }
   const parts = formatter.formatToParts(date);
   return parts.reduce((acc, part) => {
     if (part.type !== 'literal') {
@@ -29,6 +33,9 @@ const getHijriParts = (date: Date): Record<string, string> => {
 };
 
 const getHijriMonthNames = (date: Date): { monthName: string, monthNameAr: string } => {
+    if (!date || isNaN(date.getTime())) {
+      return { monthName: 'Muharram', monthNameAr: 'محرم' };
+    }
     const monthName = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { month: 'long' }).format(date);
     const monthNameAr = new Intl.DateTimeFormat('ar-u-ca-islamic-umalqura', { month: 'long' }).format(date);
     return { monthName, monthNameAr };
@@ -36,7 +43,7 @@ const getHijriMonthNames = (date: Date): { monthName: string, monthNameAr: strin
 
 export function getHijriDate(gregorianDate: Date, adjustment: number = 0): HijriDateInfo {
   // Apply adjustment to the Gregorian date before conversion
-  const adjustedDate = addDays(gregorianDate, adjustment);
+  const adjustedDate = subDays(gregorianDate, adjustment);
 
   const parts = getHijriParts(adjustedDate);
   const { monthName, monthNameAr } = getHijriMonthNames(adjustedDate);
@@ -60,28 +67,37 @@ export function getGregorianDateFromHijri(year: number, month: number, day: numb
   // Start with today's date as a safe initial estimate.
   let gregorianDate = new Date();
   
-  let hijri = getHijriDate(gregorianDate, 0); // Use 0 adjustment for the search loop
+  // Use 0 adjustment for the search loop, apply user adjustment at the end.
+  let hijri = getHijriDate(gregorianDate, 0); 
 
   let attempts = 0;
-  // Iterate forward or backward until we find the target Hijri date
   // Limit attempts to prevent an infinite loop in case of an issue.
-  while ((hijri.year !== year || hijri.month !== month || hijri.day !== day) && attempts < 15000) {
-      // Determine the difference in days for a rough jump to get closer faster
-      const yearDiff = (year - hijri.year) * 354;
-      const monthDiff = (month - hijri.month) * 29.5;
-      const dayDiff = day - hijri.day;
-      let totalDiff = Math.round(yearDiff + monthDiff + dayDiff);
+  const MAX_ATTEMPTS = 40000; 
+
+  // Estimate the difference in days for a rough jump to get closer faster
+  const yearDiff = (year - hijri.year) * 354;
+  const monthDiff = (month - hijri.month) * 29.5;
+  const dayDiff = day - hijri.day;
+  let totalDiff = Math.round(yearDiff + monthDiff + dayDiff);
+  
+  gregorianDate = addDays(gregorianDate, totalDiff);
+
+  // Fine-tune by stepping one day at a time
+  while (attempts < MAX_ATTEMPTS) {
+      hijri = getHijriDate(gregorianDate, 0);
       
-      // If we are close, just step one day at a time
-      if (totalDiff === 0) {
-        totalDiff = (year > hijri.year || month > hijri.month || day > hijri.day) ? 1 : -1;
+      if (hijri.year === year && hijri.month === month && hijri.day === day) {
+          // Found the date, now apply the user's adjustment
+          return addDays(gregorianDate, adjustment);
       }
       
-      gregorianDate = addDays(gregorianDate, totalDiff);
-      hijri = getHijriDate(gregorianDate, 0);
+      const isTargetFuture = (year > hijri.year) || (year === hijri.year && month > hijri.month) || (year === hijri.year && month === hijri.month && day > hijri.day);
+
+      gregorianDate = addDays(gregorianDate, isTargetFuture ? 1 : -1);
       attempts++;
   }
-
-  // Apply the user's manual adjustment at the end
-  return subDays(gregorianDate, adjustment);
+  
+  console.warn("Could not find Gregorian date for Hijri date:", {year, month, day});
+  // Return a fallback date if not found within attempts
+  return addDays(new Date(), adjustment);
 }
