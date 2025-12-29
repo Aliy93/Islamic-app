@@ -58,7 +58,7 @@ export default function Home() {
           <HijriCalendar />
 
           <div className="mt-6">
-            <h2 className="font-bold text-lg mb-2 text-foreground">Muslim Holidays</h2>
+            <h2 className="font-bold text-lg mb-2 text-foreground">Upcoming Holidays</h2>
             <Card>
               <CardContent className="p-0">
                 <ul className="divide-y divide-border">
