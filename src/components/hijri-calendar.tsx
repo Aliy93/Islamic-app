@@ -25,13 +25,11 @@ type CalendarDay = {
 
 interface HijriCalendarProps {
     lang: 'en' | 'ar';
+    currentHijriDate: { year: number; month: number; };
+    setCurrentHijriDate: (date: { year: number; month: number; }) => void;
 }
 
-export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
-  const [currentHijriDate, setCurrentHijriDate] = useState(() => {
-    const todayHijri = getHijriDate(new Date());
-    return { year: todayHijri.year, month: todayHijri.month };
-  });
+export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurrentHijriDate }: HijriCalendarProps) {
   const [hijriAdjustment, setHijriAdjustment] = useState(0);
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
 
@@ -64,6 +62,8 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
         event: getEventForDate(hijriInfo.month, hijriInfo.day),
       };
     });
+
+    if (monthDays.length === 0) return [];
 
     // 4. Get padding days from previous and next months
     const weekStartsOn = 6; // Saturday
@@ -100,7 +100,7 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
       weeks.push(allDays.slice(i, i + 7));
     }
     // Ensure 6 weeks for consistent layout
-    while(weeks.length < 6) {
+    while(weeks.length < 6 && weeks.length > 0) {
         const lastDay = weeks[weeks.length-1][6].gregorian;
         const nextWeek = Array.from({length: 7}).map((_,i) => {
             const gregorianDate = add(lastDay, {days: i + 1});
@@ -158,7 +158,7 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
 
   const getHijriHeader = () => {
       if (!firstDayInGrid) return "";
-      const hijriInfo = firstDayInGrid.hijri;
+      const hijriInfo = getHijriDate(getGregorianDateFromHijri(currentHijriDate.year, currentHijriDate.month, 1));
       return lang === 'ar'
           ? `${hijriInfo.monthNameAr} ${hijriInfo.year}`
           : `${hijriInfo.monthName} ${hijriInfo.year}`;
