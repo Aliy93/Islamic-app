@@ -57,27 +57,29 @@ export function getHijriDate(gregorianDate: Date, adjustment: number = 0): Hijri
  * It starts with an estimate and adjusts until it finds the correct date.
  */
 export function getGregorianDateFromHijri(year: number, month: number, day: number, adjustment: number = 0): Date {
-  // A more stable estimation to avoid invalid dates.
-  // Start with a known Gregorian date and add Hijri days.
-  // The Hijri calendar began around July 16, 622 AD.
-  let gregorianDate = new Date('622-07-16T00:00:00Z');
-  gregorianDate = addDays(gregorianDate, (year - 1) * 354.367 + (month - 1) * 29.53 + day);
-
+  // Start with today's date as a safe initial estimate.
+  let gregorianDate = new Date();
   
   let hijri = getHijriDate(gregorianDate, 0); // Use 0 adjustment for the search loop
 
   let attempts = 0;
   // Iterate forward or backward until we find the target Hijri date
-  while ((hijri.year !== year || hijri.month !== month || hijri.day !== day) && attempts < 40) {
-    // Determine the difference in days for a rough jump
-    const yearDiff = (year - hijri.year) * 354;
-    const monthDiff = (month - hijri.month) * 29.5;
-    const dayDiff = day - hijri.day;
-    const totalDiff = Math.ceil(yearDiff + monthDiff + dayDiff);
-    
-    gregorianDate = addDays(gregorianDate, totalDiff !== 0 ? totalDiff : (day > hijri.day ? 1 : -1));
-    hijri = getHijriDate(gregorianDate, 0);
-    attempts++;
+  // Limit attempts to prevent an infinite loop in case of an issue.
+  while ((hijri.year !== year || hijri.month !== month || hijri.day !== day) && attempts < 15000) {
+      // Determine the difference in days for a rough jump to get closer faster
+      const yearDiff = (year - hijri.year) * 354;
+      const monthDiff = (month - hijri.month) * 29.5;
+      const dayDiff = day - hijri.day;
+      let totalDiff = Math.round(yearDiff + monthDiff + dayDiff);
+      
+      // If we are close, just step one day at a time
+      if (totalDiff === 0) {
+        totalDiff = (year > hijri.year || month > hijri.month || day > hijri.day) ? 1 : -1;
+      }
+      
+      gregorianDate = addDays(gregorianDate, totalDiff);
+      hijri = getHijriDate(gregorianDate, 0);
+      attempts++;
   }
 
   // Apply the user's manual adjustment at the end
