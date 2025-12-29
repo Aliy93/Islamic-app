@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -196,7 +197,7 @@ export default function Home() {
 
         <div className="flex items-center justify-between text-center">
             <Button variant="ghost" size="icon" onClick={() => handleDateChange('prev')}>
-                <ChevronLeft className="h-5 w-5" />
+                {lang === 'ar' ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
             </Button>
             <div className="text-center">
                 <p className="font-bold text-foreground font-headline">
@@ -210,7 +211,7 @@ export default function Home() {
                 </p>
             </div>
             <Button variant="ghost" size="icon" onClick={() => handleDateChange('next')}>
-                <ChevronRight className="h-5 w-5" />
+                {lang === 'ar' ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
             </Button>
         </div>
         
