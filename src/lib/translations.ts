@@ -11,6 +11,7 @@ export const translations = {
     todayPrayerTimes: "Today's Prayer Times",
     prayers: {
       Fajr: 'Fajr',
+      Sunrise: 'Sunrise',
       Dhuhr: 'Dhuhr',
       Asr: 'Asr',
       Maghrib: 'Maghrib',
@@ -29,6 +30,7 @@ export const translations = {
     todayPrayerTimes: "أوقات الصلاة اليوم",
     prayers: {
       Fajr: 'الفجر',
+      Sunrise: 'الشروق',
       Dhuhr: 'الظهر',
       Asr: 'العصر',
       Maghrib: 'المغرب',

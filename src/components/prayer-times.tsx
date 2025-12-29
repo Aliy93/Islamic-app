@@ -19,6 +19,7 @@ type PrayerTimesData = {
 
 const prayerIcons = {
     Fajr: <Sunrise className="w-5 h-5 text-primary" />,
+    Sunrise: <Sunrise className="w-5 h-5 text-yellow-500" />,
     Dhuhr: <Sun className="w-5 h-5 text-primary" />,
     Asr: <Cloudy className="w-5 h-5 text-primary" />,
     Maghrib: <Sunset className="w-5 h-5 text-primary" />,
@@ -91,7 +92,7 @@ export default function PrayerTimes() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
+            {[...Array(6)].map((_, i) => (
               <div key={i} className="flex justify-between items-center">
                 <Skeleton className="h-5 w-20" />
                 <Skeleton className="h-5 w-24" />
@@ -117,7 +118,7 @@ export default function PrayerTimes() {
   }
   
   const prayerSchedule = Object.entries(prayerTimes)
-    .filter(([key]) => key !== 'Sunrise' && key !== 'Imsak' && key !== 'Midnight' && key !== 'Firstthird' && key !== 'Lastthird')
+    .filter(([key]) => key === 'Fajr' || key === 'Sunrise' || key === 'Dhuhr' || key === 'Asr' || key === 'Maghrib' || key === 'Isha')
     .map(([name, time]) => ({ name: name as keyof typeof prayerIcons, time: format(parse(time, 'HH:mm', new Date()), 'h:mm a') }));
 
   return (
