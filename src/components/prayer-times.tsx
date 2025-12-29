@@ -6,7 +6,7 @@ import { Sun, Sunrise, Sunset, Moon } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import { useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
-import { cn } from '@/lib/utils';
+import { cn, toArabicNumerals } from '@/lib/utils';
 
 type PrayerTimesData = {
   Fajr: string;
@@ -146,10 +146,15 @@ export default function PrayerTimes({ currentDate: initialDate, location: initia
   const prayerSchedule: PrayerInfo[] = (Object.keys(prayerIcons) as Array<keyof PrayerTimesData>).map(name => {
     const time24 = prayerTimes[name];
     const beginsTime = parse(time24, 'HH:mm', new Date());
+    let timeString = format(beginsTime, 'h:mm a');
+
+    if (lang === 'ar') {
+      timeString = toArabicNumerals(format(beginsTime, 'h:mm')) + (format(beginsTime, 'a') === 'AM' ? ' ص' : ' م');
+    }
 
     return {
         name,
-        begins: format(beginsTime, 'h:mm a'),
+        begins: timeString,
     }
   });
 

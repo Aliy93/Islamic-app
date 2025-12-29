@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { getHijriDate } from '@/lib/hijri';
 import { translations } from '@/lib/translations';
 import { Language } from '@/context/language-context';
+import { toArabicNumerals } from '@/lib/utils';
 
 interface CalendarHeaderProps {
   onTodayClick: () => void;
@@ -19,8 +20,6 @@ export default function CalendarHeader({ onTodayClick, lang }: CalendarHeaderPro
   const hijriDate = getHijriDate(currentDate);
   const t = translations[lang];
 
-  const gregorianFullDate = format(currentDate, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : enUS });
-
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -28,7 +27,7 @@ export default function CalendarHeader({ onTodayClick, lang }: CalendarHeaderPro
         <div>
           <p className="font-bold text-foreground">
             {lang === 'ar'
-              ? `${hijriDate.day} ${hijriDate.monthNameAr} ${hijriDate.year} هـ`
+              ? `${toArabicNumerals(hijriDate.day)} ${hijriDate.monthNameAr} ${toArabicNumerals(hijriDate.year)} هـ`
               : `${hijriDate.monthName} ${hijriDate.day}, ${hijriDate.year} H`}
           </p>
           <p className="text-sm text-muted-foreground">

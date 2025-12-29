@@ -6,6 +6,7 @@ import { useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
+import { toArabicNumerals } from '@/lib/utils';
 
 export default function QiblaCompass() {
   const { lang } = useLanguage();
@@ -131,7 +132,7 @@ export default function QiblaCompass() {
       
        <div className="text-center">
             <p className="text-muted-foreground font-body">{lang === 'ar' ? 'اتجاه القبلة' : 'Qibla Direction'}</p>
-            <p className="text-2xl font-bold font-code text-primary">{qiblaDirection.toFixed(0)}°</p>
+            <p className="text-2xl font-bold font-code text-primary">{lang === 'ar' ? toArabicNumerals(qiblaDirection.toFixed(0)) : qiblaDirection.toFixed(0)}°</p>
        </div>
     </div>
   );

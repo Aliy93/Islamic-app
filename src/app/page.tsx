@@ -9,6 +9,7 @@ import { arSA } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PrayerTimes from '@/components/prayer-times';
+import { toArabicNumerals } from '@/lib/utils';
 
 type PrayerTimesData = {
   Fajr: string;
@@ -167,14 +168,15 @@ export default function Home() {
         const minutes = Math.floor((diff % 3600) / 60);
         const seconds = diff % 60;
 
-        setTimeToNextPrayer(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+        const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        setTimeToNextPrayer(lang === 'ar' ? toArabicNumerals(timeString) : timeString);
     };
 
     calculateCountdown();
     const countdownInterval = setInterval(calculateCountdown, 1000);
     return () => clearInterval(countdownInterval);
 
-  }, [nextPrayer]);
+  }, [nextPrayer, lang]);
 
   const handleDateChange = (direction: 'next' | 'prev') => {
     setCurrentDate(prevDate => addDays(prevDate, direction === 'next' ? 1 : -1));
@@ -189,7 +191,7 @@ export default function Home() {
                   {nextPrayer ? (lang === 'ar' ? t.prayers[nextPrayer.name]?.arabic : nextPrayer.name) : t.loading}
                 </h2>
             </div>
-            <p className="text-5xl font-bold font-code text-foreground">{timeToNextPrayer || '00:00:00'}</p>
+            <p className="text-5xl font-bold font-code text-foreground">{timeToNextPrayer || (lang === 'ar' ? toArabicNumerals('00:00:00') : '00:00:00')}</p>
         </div>
 
         <div className="flex items-center justify-between text-center">
@@ -199,7 +201,7 @@ export default function Home() {
             <div className="text-center">
                 <p className="font-bold text-foreground font-headline">
                     {lang === 'ar' 
-                        ? `${hijriDate.monthNameAr} ${hijriDate.day}, ${hijriDate.year} هـ` 
+                        ? `${hijriDate.monthNameAr} ${toArabicNumerals(hijriDate.day)}, ${toArabicNumerals(hijriDate.year)} هـ` 
                         : `${hijriDate.monthName} ${hijriDate.day}, ${hijriDate.year} AH`
                     }
                 </p>

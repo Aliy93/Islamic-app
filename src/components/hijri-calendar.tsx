@@ -13,7 +13,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getHijriDate, HijriDateInfo, getGregorianDateFromHijri } from '@/lib/hijri';
 import { getEventForDate, IslamicEvent } from '@/lib/islamic-events';
-import { cn } from '@/lib/utils';
+import { cn, toArabicNumerals } from '@/lib/utils';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Separator } from './ui/separator';
 
@@ -156,7 +156,7 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
       if (!firstDayInGrid) return "";
       const hijriInfo = getHijriDate(getGregorianDateFromHijri(currentHijriDate.year, currentHijriDate.month, 1));
       return lang === 'ar'
-          ? `${hijriInfo.monthNameAr} ${hijriInfo.year}`
+          ? `${hijriInfo.monthNameAr} ${toArabicNumerals(hijriInfo.year)}`
           : `${hijriInfo.monthName} ${hijriInfo.year}`;
   };
   
@@ -225,10 +225,10 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
                       'font-bold text-lg',
                       {'opacity-50': !day.isCurrentMonth}
                   )}>
-                    {day.hijri.day}
+                    {lang === 'ar' ? toArabicNumerals(day.hijri.day) : day.hijri.day}
                   </span>
                  <span className="text-[10px] text-muted-foreground">
-                    {format(day.gregorian, 'd')}
+                    {lang === 'ar' ? toArabicNumerals(format(day.gregorian, 'd')) : format(day.gregorian, 'd')}
                 </span>
                 </div>
                 {day.event && day.isCurrentMonth && (
@@ -246,14 +246,14 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
                     <div key={day.gregorian.toISOString()}>
                         <div className="flex items-center gap-4 w-full p-4">
                             <div className="text-center border-r-4 border-primary pr-4">
-                                <p className="text-3xl font-bold">{day.hijri.day}</p>
+                                <p className="text-3xl font-bold">{lang === 'ar' ? toArabicNumerals(day.hijri.day) : day.hijri.day}</p>
                             </div>
                             <div className="flex-grow">
                                 <h3 className="font-bold text-foreground">{lang === 'ar' ? day.event!.nameAr : day.event!.name}</h3>
                                 <div className="flex justify-between items-center text-sm text-muted-foreground">
                                    <span>
                                         {lang === 'ar' 
-                                            ? `${day.hijri.monthNameAr} ${day.hijri.day}, ${day.hijri.year}`
+                                            ? `${day.hijri.monthNameAr} ${toArabicNumerals(day.hijri.day)}, ${toArabicNumerals(day.hijri.year)}`
                                             : `${day.hijri.day} ${day.hijri.monthName}, ${day.hijri.year}`
                                         }
                                     </span>
