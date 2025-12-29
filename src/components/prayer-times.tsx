@@ -5,6 +5,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Sun, Sunrise, Sunset, Moon, Cloudy } from 'lucide-react';
 import { format, parse } from 'date-fns';
+import { useLanguage } from '@/context/language-context';
+import { translations } from '@/lib/translations';
 
 type PrayerTimesData = {
   Fajr: string;
@@ -23,15 +25,10 @@ const prayerIcons = {
     Isha: <Moon className="w-5 h-5 text-primary" />,
 };
 
-const prayerNames: Record<keyof Omit<PrayerTimesData, 'Sunrise'>, string> = {
-    Fajr: 'Fajr',
-    Dhuhr: 'Dhuhr',
-    Asr: 'Asr',
-    Maghrib: 'Maghrib',
-    Isha: 'Isha',
-};
-
 export default function PrayerTimes() {
+  const { lang } = useLanguage();
+  const t = translations[lang];
+
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +87,7 @@ export default function PrayerTimes() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Today's Prayer Times</CardTitle>
+          <CardTitle>{t.todayPrayerTimes}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -126,7 +123,7 @@ export default function PrayerTimes() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Today's Prayer Times</CardTitle>
+        <CardTitle>{t.todayPrayerTimes}</CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="divide-y divide-border">
@@ -134,7 +131,7 @@ export default function PrayerTimes() {
                 <li key={name} className="flex items-center justify-between py-3">
                     <div className="flex items-center gap-3">
                         {prayerIcons[name]}
-                        <span className="font-semibold capitalize text-foreground">{name}</span>
+                        <span className="font-semibold capitalize text-foreground">{t.prayers[name]}</span>
                     </div>
                     <span className="font-mono text-lg text-muted-foreground">{time}</span>
                 </li>
