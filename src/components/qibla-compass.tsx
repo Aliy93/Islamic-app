@@ -48,7 +48,11 @@ export default function QiblaCompass() {
 
   useEffect(() => {
     fetchAndSetLocation(); // Always fetch fresh location for Qibla
-    requestPermission();
+    
+    // Auto-request on load only if not explicitly denied before
+    if(permissionGranted !== false) {
+        requestPermission();
+    }
 
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation);
