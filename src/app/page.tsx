@@ -1,14 +1,25 @@
-import { Menu, RefreshCw, Compass, CalendarDays, List, Calendar as CalendarIcon, BookOpen } from 'lucide-react';
+import { Menu, RefreshCw, Compass, CalendarDays, BookOpen, Calendar as CalendarIcon } from 'lucide-react';
 import HijriCalendar from '@/components/hijri-calendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { islamicEvents } from '@/lib/islamic-events';
 import { format } from 'date-fns';
+import Link from 'next/link';
 
 export default function Home() {
   const getHijriMonthName = (month: number) => {
-    const dateForMonth = new Date(2024, month - 1, 1);
-    return new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { month: 'long' }).format(dateForMonth);
+    // This is a bit of a hack, but it works.
+    // We create a date in the middle of the month to avoid any off-by-one errors
+    // with different calendar systems.
+    const dateForMonth = new Date(2024, 0, 15);
+    dateForMonth.setMonth(month - 1);
+    
+    try {
+        return new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { month: 'long' }).format(dateForMonth);
+    } catch (e) {
+        console.error(e);
+        return 'Unknown';
+    }
   }
 
   return (
@@ -26,10 +37,10 @@ export default function Home() {
 
         <main className="p-4">
           <div className="bg-primary text-primary-foreground rounded-lg p-4 grid grid-cols-4 gap-4 text-center mb-4">
-             <Button variant="ghost" className="flex flex-col h-auto items-center hover:bg-primary/80">
+             <a href="https://qiblafinder.withgoogle.com/" target="_blank" rel="noopener noreferrer" className="flex flex-col h-auto items-center justify-center gap-1.5 p-2 rounded-lg hover:bg-primary/80 text-primary-foreground no-underline">
               <Compass className="w-6 h-6" />
               <span className="text-xs mt-1">Qibla</span>
-            </Button>
+            </a>
             <Button variant="ghost" className="flex flex-col h-auto items-center hover:bg-primary/80">
               <CalendarDays className="w-6 h-6" />
                <span className="text-xs mt-1">Prayer</span>
