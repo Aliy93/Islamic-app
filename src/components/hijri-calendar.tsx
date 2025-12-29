@@ -4,20 +4,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   format,
-  startOfMonth,
-  eachDayOfInterval,
   isToday,
   add,
   sub,
-  isSameMonth,
-  startOfWeek,
-  endOfMonth,
-  getDay,
 } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getHijriDate, HijriDateInfo } from '@/lib/hijri';
+import { getHijriDate, HijriDateInfo, getGregorianDateFromHijri } from '@/lib/hijri';
 import { getEventForDate, IslamicEvent } from '@/lib/islamic-events';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
@@ -34,7 +28,10 @@ interface HijriCalendarProps {
 }
 
 export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
-  const [viewDate, setViewDate] = useState(new Date());
+  const [currentHijriDate, setCurrentHijriDate] = useState(() => {
+    const todayHijri = getHijriDate(new Date());
+    return { year: todayHijri.year, month: todayHijri.month };
+  });
   const [hijriAdjustment, setHijriAdjustment] = useState(0);
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
 
@@ -46,27 +43,80 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
   }, []);
 
   const calendarGrid = useMemo((): CalendarDay[][] => {
-    const monthStart = startOfMonth(viewDate);
-    const gridStart = startOfWeek(monthStart, { weekStartsOn: 6 }); // Week starts on Saturday
+    const { year, month } = currentHijriDate;
 
-    const days = Array.from({ length: 42 }, (_, i) => add(gridStart, { days: i }));
+    // 1. Find the Gregorian date for the 1st of the current Hijri month
+    const firstDayOfHijriMonthGregorian = getGregorianDateFromHijri(year, month, 1, hijriAdjustment);
 
+    // 2. Determine the number of days in the current Hijri month (29 or 30)
+    const nextMonthGregorian = getGregorianDateFromHijri(month === 12 ? year + 1 : year, month === 12 ? 1 : month + 1, 1, hijriAdjustment);
+    const daysInMonth = Math.round((nextMonthGregorian.getTime() - firstDayOfHijriMonthGregorian.getTime()) / (1000 * 60 * 60 * 24));
+
+    // 3. Generate all days of the current Hijri month
+    const monthDays: CalendarDay[] = Array.from({ length: daysInMonth }, (_, i) => {
+      const dayNumber = i + 1;
+      const gregorianDate = add(firstDayOfHijriMonthGregorian, { days: i });
+      const hijriInfo = getHijriDate(gregorianDate, hijriAdjustment);
+      return {
+        gregorian: gregorianDate,
+        hijri: hijriInfo,
+        isCurrentMonth: true,
+        event: getEventForDate(hijriInfo.month, hijriInfo.day),
+      };
+    });
+
+    // 4. Get padding days from previous and next months
+    const weekStartsOn = 6; // Saturday
+    const startDayOfWeek = (monthDays[0].gregorian.getDay() + 1) % 7; // Convert Sunday-first to Saturday-first
+    const endDayOfWeek = (monthDays[daysInMonth - 1].gregorian.getDay() + 1) % 7;
+
+    const daysBefore: CalendarDay[] = Array.from({ length: startDayOfWeek }).map((_, i) => {
+        const gregorianDate = sub(firstDayOfHijriMonthGregorian, { days: startDayOfWeek - i });
+        const hijriInfo = getHijriDate(gregorianDate, hijriAdjustment);
+        return {
+            gregorian: gregorianDate,
+            hijri: hijriInfo,
+            isCurrentMonth: false,
+            event: undefined,
+        };
+    });
+    
+    const daysAfter: CalendarDay[] = Array.from({ length: 6 - endDayOfWeek }).map((_, i) => {
+        const gregorianDate = add(nextMonthGregorian, { days: i });
+        const hijriInfo = getHijriDate(gregorianDate, hijriAdjustment);
+        return {
+            gregorian: gregorianDate,
+            hijri: hijriInfo,
+            isCurrentMonth: false,
+            event: undefined,
+        };
+    });
+
+    const allDays = [...daysBefore, ...monthDays, ...daysAfter];
+
+    // 5. Structure into weeks
     const weeks: CalendarDay[][] = [];
-    for (let i = 0; i < 6; i++) {
-        const weekDays = days.slice(i * 7, (i + 1) * 7).map(day => {
-            const hijri = getHijriDate(day, hijriAdjustment);
-            const event = getEventForDate(hijri.month, hijri.day);
-            return {
-                gregorian: day,
-                hijri: hijri,
-                isCurrentMonth: isSameMonth(day, viewDate),
-                event: event,
-            };
-        });
-        weeks.push(weekDays);
+    for (let i = 0; i < allDays.length; i += 7) {
+      weeks.push(allDays.slice(i, i + 7));
     }
+    // Ensure 6 weeks for consistent layout
+    while(weeks.length < 6) {
+        const lastDay = weeks[weeks.length-1][6].gregorian;
+        const nextWeek = Array.from({length: 7}).map((_,i) => {
+            const gregorianDate = add(lastDay, {days: i + 1});
+            const hijriInfo = getHijriDate(gregorianDate, hijriAdjustment);
+            return {
+                gregorian: gregorianDate,
+                hijri: hijriInfo,
+                isCurrentMonth: false,
+                event: undefined,
+            }
+        });
+        weeks.push(nextWeek);
+    }
+    
     return weeks;
-}, [viewDate, hijriAdjustment]);
+  }, [currentHijriDate, hijriAdjustment]);
 
   useEffect(() => {
     // Find the first event in the current month view and select it by default
@@ -77,11 +127,17 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
   }, [calendarGrid]);
 
   const handlePrevMonth = () => {
-    setViewDate(sub(viewDate, { months: 1 }));
+    setCurrentHijriDate(prev => {
+        if (prev.month === 1) return { year: prev.year - 1, month: 12 };
+        return { ...prev, month: prev.month - 1 };
+    });
     setSelectedDay(null);
   }
   const handleNextMonth = () => {
-    setViewDate(add(viewDate, { months: 1 }));
+    setCurrentHijriDate(prev => {
+        if (prev.month === 12) return { year: prev.year + 1, month: 1 };
+        return { ...prev, month: prev.month + 1 };
+    });
     setSelectedDay(null);
   }
 
@@ -97,19 +153,33 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
     ? ['سبت', 'أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة'] 
     : ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
     
-  const startOfMonthHijri = getHijriDate(startOfMonth(viewDate), hijriAdjustment);
-  const endOfMonthHijri = getHijriDate(endOfMonth(viewDate), hijriAdjustment);
+  const firstDayInGrid = calendarGrid[0]?.[0];
+  const lastDayInGrid = calendarGrid[calendarGrid.length - 1]?.[6];
 
   const getHijriHeader = () => {
-      if (startOfMonthHijri.month === endOfMonthHijri.month) {
-          return lang === 'ar'
-              ? `${startOfMonthHijri.monthNameAr} ${startOfMonthHijri.year}`
-              : `${startOfMonthHijri.monthName} ${startOfMonthHijri.year}`;
-      }
+      if (!firstDayInGrid) return "";
+      const hijriInfo = firstDayInGrid.hijri;
       return lang === 'ar'
-          ? `${startOfMonthHijri.monthNameAr} - ${endOfMonthHijri.monthNameAr} ${endOfMonthHijri.year}`
-          : `${startOfMonthHijri.monthName} - ${endOfMonthHijri.monthName} ${endOfMonthHijri.year}`;
+          ? `${hijriInfo.monthNameAr} ${hijriInfo.year}`
+          : `${hijriInfo.monthName} ${hijriInfo.year}`;
   };
+  
+  const getGregorianHeader = () => {
+      if (!firstDayInGrid || !lastDayInGrid) return "";
+      const startGrego = format(firstDayInGrid.gregorian, 'MMMM', { locale: lang === 'ar' ? arSA : enUS });
+      const endGrego = format(lastDayInGrid.gregorian, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : enUS });
+      const startYear = format(firstDayInGrid.gregorian, 'yyyy');
+      const endYear = format(lastDayInGrid.gregorian, 'yyyy');
+      
+      if (startYear !== endYear) {
+          return `${format(firstDayInGrid.gregorian, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : enUS })} - ${endGrego}`;
+      }
+      if (startGrego === endGrego.split(' ')[0]) {
+          return endGrego;
+      }
+      return `${startGrego} - ${endGrego}`;
+  };
+
 
   return (
     <Card className="bg-card rounded-lg shadow">
@@ -119,10 +189,10 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
         </Button>
         <div className="text-center flex-grow">
           <h2 className="font-bold text-lg text-foreground">
-             {format(viewDate, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : enUS })}
+             {getHijriHeader()}
           </h2>
           <p className="text-sm text-muted-foreground">
-             {getHijriHeader()}
+             {getGregorianHeader()}
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={handleNextMonth} aria-label="Next month">
@@ -155,9 +225,9 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
               >
                 <div className={cn(
                   'w-10 h-10 flex flex-col items-center justify-center rounded-lg transition-colors',
-                  day.isCurrentMonth && isToday(day.gregorian) && 'bg-primary text-primary-foreground',
+                   day.isCurrentMonth && isToday(day.gregorian) && 'bg-primary text-primary-foreground',
                   day.isCurrentMonth && !isToday(day.gregorian) && !!day.event && 'hover:bg-accent/50',
-                  { 'border-2 border-primary': day.event }
+                  { 'border-2 border-primary': day.isCurrentMonth && day.event }
                 )}>
                   <span className={cn(
                       'font-bold text-lg',
