@@ -11,6 +11,7 @@ import {
   sub,
   isSameMonth,
   startOfWeek,
+  endOfMonth,
 } from 'date-fns';
 import { arSA } from 'date-fns/locale/ar-SA';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -76,7 +77,19 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
       longWeekdays.unshift(longWeekdays.pop()!);
   }
 
-  const hijriDateForHeader = getHijriDate(viewDate, hijriAdjustment);
+    const startOfMonthHijri = getHijriDate(startOfMonth(viewDate), hijriAdjustment);
+    const endOfMonthHijri = getHijriDate(endOfMonth(viewDate), hijriAdjustment);
+
+    const getHijriHeader = () => {
+        if (startOfMonthHijri.month === endOfMonthHijri.month) {
+            return lang === 'ar'
+                ? `${startOfMonthHijri.monthNameAr} ${startOfMonthHijri.year}`
+                : `${startOfMonthHijri.monthName} ${startOfMonthHijri.year}`;
+        }
+        return lang === 'ar'
+            ? `${startOfMonthHijri.monthNameAr} - ${endOfMonthHijri.monthNameAr} ${endOfMonthHijri.year}`
+            : `${startOfMonthHijri.monthName} - ${endOfMonthHijri.monthName} ${endOfMonthHijri.year}`;
+    };
 
   return (
     <div className="bg-card rounded-lg shadow">
@@ -86,10 +99,10 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
         </Button>
         <div className="text-center flex-grow">
           <h2 className="font-bold text-lg text-foreground">
-            {lang === 'ar' ? `${hijriDateForHeader.monthNameAr} ${hijriDateForHeader.year}` : `${hijriDateForHeader.monthName} ${hijriDateForHeader.year}` }
+            {getHijriHeader()}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {format(viewDate, 'd MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined })}
+             {format(viewDate, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined })}
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={handleNextMonth} aria-label="Next month">
