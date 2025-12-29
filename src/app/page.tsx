@@ -138,9 +138,9 @@ export default function Home() {
         <div className="bg-primary/20 text-primary-foreground p-4 rounded-lg text-center">
             <p className="text-sm text-foreground/80">{t.timeTill}</p>
             <div className="flex items-center justify-center gap-2 my-1">
-                <h2 className="text-2xl font-bold text-foreground">{nextPrayer ? t.prayers[nextPrayer.name] : ''}</h2>
-                 {lang === 'en' && nextPrayer && <span className="text-2xl font-bold text-foreground">|</span>}
-                <h2 className="text-2xl font-bold text-foreground">{nextPrayer ? (lang === 'ar' ? t.prayers[nextPrayer.name] : nextPrayer.name) : t.loading}</h2>
+                <h2 className="text-2xl font-bold text-foreground">
+                  {nextPrayer ? (lang === 'ar' ? t.prayers[nextPrayer.name]?.arabic : nextPrayer.name) : t.loading}
+                </h2>
             </div>
             <p className="text-5xl font-bold font-mono text-foreground">{timeToNextPrayer || '00:00:00'}</p>
         </div>

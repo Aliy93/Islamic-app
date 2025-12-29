@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Sun, Sunrise, Sunset, Moon, Bell, DivideCircle, Thermometer } from 'lucide-react';
+import { Sun, Sunrise, Sunset, Moon, Bell, Thermometer } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import { useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
