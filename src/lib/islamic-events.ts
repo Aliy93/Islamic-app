@@ -17,7 +17,7 @@ export const islamicEvents: IslamicEvent[] = [
   {
     month: 1,
     day: 10,
-    name: "Day of Ashura",
+    name: "Ashura",
     description: "A day of fasting, commemorating when God saved Moses and the Israelites from their foe.",
   },
   {

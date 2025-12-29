@@ -1,29 +1,62 @@
+import { Menu, RefreshCw, Clock, CalendarDays, List, Calendar as CalendarIcon } from 'lucide-react';
 import HijriCalendar from '@/components/hijri-calendar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { islamicEvents } from '@/lib/islamic-events';
+import { format } from 'date-fns';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-background text-foreground p-4 sm:p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <header className="text-center mb-8">
-          <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary tracking-tight">
-            HijriSync
-          </h1>
-          <p className="text-muted-foreground mt-2 text-lg max-w-2xl mx-auto">
-            A modern Gregorian-Hijri calendar with important Islamic events highlighted.
-          </p>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans">
+      <div className="max-w-md mx-auto bg-white dark:bg-black shadow-lg">
+        <header className="bg-primary text-primary-foreground p-4 flex items-center justify-between">
+          <Button variant="ghost" size="icon" className="hover:bg-primary/80">
+            <Menu />
+          </Button>
+          <h1 className="text-xl font-bold">Muslim App</h1>
+          <Button variant="ghost" size="icon" className="hover:bg-primary/80">
+            <RefreshCw />
+          </Button>
         </header>
-        
-        <HijriCalendar />
 
-        <footer className="text-center mt-8 text-sm text-muted-foreground">
-            <p>
-                Hijri date may vary based on local moon sightings. Use the adjustment buttons for accuracy.
-            </p>
-            <p className="mt-1">
-                Built for a seamless cultural and spiritual experience.
-            </p>
-        </footer>
+        <main className="p-4">
+          <div className="bg-primary text-primary-foreground rounded-lg p-4 grid grid-cols-4 gap-4 text-center mb-4">
+             <Button variant="ghost" className="flex flex-col h-auto items-center hover:bg-primary/80">
+              <Clock className="w-6 h-6" />
+            </Button>
+            <Button variant="ghost" className="flex flex-col h-auto items-center hover:bg-primary/80">
+              <CalendarDays className="w-6 h-6" />
+            </Button>
+            <Button variant="ghost" className="flex flex-col h-auto items-center hover:bg-primary/80">
+              <List className="w-6 h-6" />
+            </Button>
+            <Button variant="ghost" className="flex flex-col h-auto items-center bg-black/10 rounded-lg">
+              <CalendarIcon className="w-6 h-6" />
+            </Button>
+          </div>
+
+          <HijriCalendar />
+
+          <div className="mt-6">
+            <h2 className="font-bold text-lg mb-2 text-foreground">Muslim Holidays</h2>
+            <Card>
+              <CardContent className="p-0">
+                <ul className="divide-y divide-border">
+                  {islamicEvents.map((event, index) => (
+                    <li key={index} className="px-4 py-3 flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold text-foreground">{event.name}</p>
+                        <p className="text-sm text-muted-foreground">{event.day} {new Intl.DisplayNames(['en'], { type: 'month' }).of(String(event.month))} 1445</p>
+                      </div>
+                      <span className="text-sm font-medium text-primary">{format(new Date(2024, event.month - 1, event.day), "dd MMMM yyyy")}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
       </div>
-    </main>
+    </div>
   );
 }

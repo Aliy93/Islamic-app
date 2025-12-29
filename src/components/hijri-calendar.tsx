@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   format,
   startOfMonth,
-  endOfMonth,
   eachDayOfInterval,
   getDay,
   isToday,
@@ -12,14 +11,13 @@ import {
   sub,
   isSameMonth,
   startOfWeek,
+  endOfMonth,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getHijriDate, HijriDateInfo } from '@/lib/hijri';
 import { getEventForDate, IslamicEvent } from '@/lib/islamic-events';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type CalendarDay = {
   gregorian: Date;
@@ -44,120 +42,99 @@ export default function HijriCalendar() {
     localStorage.setItem('hijriAdjustment', adj.toString());
   };
 
-  const calendarDays = useMemo((): CalendarDay[] => {
+  const calendarGrid = useMemo((): CalendarDay[][] => {
     const monthStart = startOfMonth(viewDate);
     const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 }); // Sunday
 
     const days = Array.from({ length: 42 }, (_, i) => add(gridStart, { days: i }));
 
-    return days.map((day) => {
-      const hijri = getHijriDate(day, hijriAdjustment);
-      const event = getEventForDate(hijri.month, hijri.day);
-      return {
-        gregorian: day,
-        hijri: hijri,
-        isCurrentMonth: isSameMonth(day, viewDate),
-        event: event,
-      };
-    });
-  }, [viewDate, hijriAdjustment]);
+    const weeks: CalendarDay[][] = [];
+    for (let i = 0; i < 6; i++) {
+        const weekDays = days.slice(i * 7, (i + 1) * 7).map(day => {
+            const hijri = getHijriDate(day, hijriAdjustment);
+            const event = getEventForDate(hijri.month, hijri.day);
+            return {
+                gregorian: day,
+                hijri: hijri,
+                isCurrentMonth: isSameMonth(day, viewDate),
+                event: event,
+            };
+        });
+        weeks.push(weekDays);
+    }
+    return weeks;
+}, [viewDate, hijriAdjustment]);
 
   const handlePrevMonth = () => setViewDate(sub(viewDate, { months: 1 }));
   const handleNextMonth = () => setViewDate(add(viewDate, { months: 1 }));
-  const handleToday = () => setViewDate(new Date());
 
-  const weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  const longWeekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const longWeekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+  const hijriDateForHeader = getHijriDate(viewDate, hijriAdjustment);
 
   return (
-    <Card className="shadow-lg shadow-primary/5 border-primary/10">
-      <CardHeader className="p-4 border-b">
-        <div className="flex items-center justify-between gap-2 sm:gap-4">
-          <Button variant="ghost" size="icon" onClick={handlePrevMonth} aria-label="Previous month" className="shrink-0">
-            <ChevronLeft className="h-6 w-6" />
-          </Button>
-          <div className="text-center font-headline flex-grow">
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-primary">
-              {format(viewDate, 'MMMM yyyy')}
-            </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              {getHijriDate(startOfMonth(viewDate), hijriAdjustment).monthName} - {getHijriDate(endOfMonth(viewDate), hijriAdjustment).monthName}, {getHijriDate(endOfMonth(viewDate), hijriAdjustment).year} AH
-            </p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={handleNextMonth} aria-label="Next month" className="shrink-0">
-            <ChevronRight className="h-6 w-6" />
-          </Button>
+    <div className="bg-card rounded-lg shadow">
+      <div className="flex items-center justify-between gap-4 p-4">
+        <Button variant="ghost" size="icon" onClick={handlePrevMonth} aria-label="Previous month">
+          <ChevronLeft className="h-6 w-6 text-foreground" />
+        </Button>
+        <div className="text-center flex-grow">
+          <h2 className="font-bold text-lg text-foreground">
+            {hijriDateForHeader.day} {hijriDateForHeader.monthName} {hijriDateForHeader.year}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {format(viewDate, 'MMMM yyyy')}
+          </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mt-4">
-            <Button size="sm" variant="outline" onClick={handleToday}>Today</Button>
-            <div className="flex items-center gap-1 sm:gap-2">
-                <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">Hijri Adjust:</span>
-                <Button size="sm" variant={hijriAdjustment === -1 ? "default" : "outline"} onClick={() => handleSetAdjustment(-1)} className="px-2 h-8 sm:px-3 sm:h-9">-1</Button>
-                <Button size="sm" variant={hijriAdjustment === 0 ? "default" : "outline"} onClick={() => handleSetAdjustment(0)} className="px-2 h-8 sm:px-3 sm:h-9">0</Button>
-                <Button size="sm" variant={hijriAdjustment === 1 ? "default" : "outline"} onClick={() => handleSetAdjustment(1)} className="px-2 h-8 sm:px-3 sm:h-9">+1</Button>
-            </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="grid grid-cols-7 bg-card">
-          {weekdays.map((day, index) => (
-            <div key={`${day}-${index}`} className="text-center font-bold text-muted-foreground py-2 sm:py-3 text-xs sm:text-sm border-b border-r last:border-r-0">
-              <span className="sm:hidden">{day}</span>
-              <span className="hidden sm:inline">{longWeekdays[index]}</span>
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 grid-rows-6">
-          {calendarDays.map((day, index) => (
-            <TooltipProvider key={index} delayDuration={100}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
-                    className={cn(
-                      'relative p-1 sm:p-2 h-20 sm:h-24 md:h-28 border-b border-r overflow-hidden transition-colors duration-200 flex flex-col group/day',
-                      day.isCurrentMonth ? 'bg-card' : 'bg-muted/30',
-                      isToday(day.gregorian) && 'bg-accent/20 ring-1 ring-accent',
-                      { 'cursor-pointer hover:bg-primary/5': day.event },
-                      index % 7 === 6 && 'border-r-0',
-                      index >= 35 && 'border-b-0'
-                    )}
-                  >
-                    <div className="flex justify-between items-start">
-                      <span className={cn(
-                        'font-bold text-xs sm:text-sm select-none',
-                        day.isCurrentMonth ? 'text-foreground' : 'text-muted-foreground/60',
-                        isToday(day.gregorian) && 'text-primary'
-                      )}>
-                        {format(day.gregorian, 'd')}
-                      </span>
-                      <span className={cn(
-                        'font-mono text-[10px] sm:text-xs select-none',
-                        day.isCurrentMonth ? 'text-muted-foreground' : 'text-muted-foreground/50'
-                      )}>
-                        {day.hijri.day}
-                      </span>
-                    </div>
-                    {day.event && (
-                      <div className="mt-auto text-center flex-grow flex flex-col justify-center items-center">
-                        <Star className="h-4 w-4 sm:h-5 sm:w-5 text-accent-foreground fill-accent mb-1" />
-                        <p className="text-xs truncate font-medium text-primary hidden md:block">
-                          {day.event.name}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </TooltipTrigger>
-                {day.event && (
-                  <TooltipContent className="bg-primary text-primary-foreground border-primary-foreground/20">
-                    <p className="font-bold">{day.event.name}</p>
-                    <p className="text-sm max-w-xs">{day.event.description}</p>
-                  </TooltipContent>
+        <Button variant="ghost" size="icon" onClick={handleNextMonth} aria-label="Next month">
+          <ChevronRight className="h-6 w-6 text-foreground" />
+        </Button>
+      </div>
+      
+      <div className="grid grid-cols-7 text-center text-sm font-medium text-red-500 py-2 border-b">
+        {longWeekdays.map((day, index) => (
+          <div key={`${day}-${index}`}>{day}</div>
+        ))}
+      </div>
+
+      <div className="p-2">
+        {calendarGrid.map((week, weekIndex) => (
+          <div key={weekIndex} className="grid grid-cols-7 text-center">
+            {week.map((day, dayIndex) => (
+              <div
+                key={day.gregorian.toISOString()}
+                className={cn(
+                  'relative p-1 h-14 flex flex-col items-center justify-center rounded-full',
+                  {
+                    'text-muted-foreground/50': !day.isCurrentMonth,
+                    'text-foreground': day.isCurrentMonth,
+                  }
                 )}
-              </Tooltip>
-            </TooltipProvider>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+              >
+                <div className={cn(
+                  'w-8 h-8 flex flex-col items-center justify-center rounded-full transition-colors',
+                  day.isCurrentMonth && isToday(day.gregorian) && 'bg-primary text-primary-foreground',
+                  day.isCurrentMonth && !isToday(day.gregorian) && 'hover:bg-accent/50',
+                  { 'border border-primary': day.event }
+                )}>
+                  <span className={cn(
+                      'font-medium text-sm',
+                      {'text-red-500': dayIndex === 0 && day.isCurrentMonth, 'text-blue-500': dayIndex === 6 && day.isCurrentMonth}
+                  )}>
+                    {format(day.gregorian, 'd')}
+                  </span>
+                </div>
+                <span className="text-[10px] text-muted-foreground">
+                    {day.isCurrentMonth ? day.hijri.day : ''}
+                </span>
+                {day.event && day.isCurrentMonth && (
+                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-green-500 rounded-full"></div>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
