@@ -18,6 +18,9 @@ export default function CalendarHeader({ currentDate, onTodayClick, lang }: Cale
   const hijriDate = getHijriDate(currentDate);
   const t = translations[lang];
 
+  // This will now reflect the first day of the viewed month
+  const gregorianFullDate = format(currentDate, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : enUS });
+
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -25,15 +28,15 @@ export default function CalendarHeader({ currentDate, onTodayClick, lang }: Cale
         <div>
           <p className="font-bold text-foreground">
             {lang === 'ar'
-              ? `${hijriDate.monthNameAr} ${hijriDate.day}, ${hijriDate.year} هـ`
-              : `${hijriDate.monthName} ${hijriDate.day}, ${hijriDate.year} H`}
+              ? `${hijriDate.monthNameAr} ${hijriDate.year} هـ`
+              : `${hijriDate.monthName} ${hijriDate.year} H`}
           </p>
           <p className="text-sm text-muted-foreground">
-            {format(currentDate, 'eeee, d MMMM, yyyy', { locale: lang === 'ar' ? arSA : enUS })}
+            {gregorianFullDate}
           </p>
         </div>
       </div>
-      <Button variant="ghost" onClick={onTodayClick}>
+      <Button variant="outline" onClick={onTodayClick}>
         {lang === 'ar' ? 'اليوم' : 'Today'}
       </Button>
     </div>

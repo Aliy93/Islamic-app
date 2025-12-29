@@ -272,5 +272,3 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
     </Card>
   );
 }
-
-    
