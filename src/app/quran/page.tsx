@@ -2,7 +2,6 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function QuranPage() {
   return (
@@ -16,15 +15,12 @@ export default function QuranPage() {
           </Link>
           <h1 className="text-xl font-bold">Quran</h1>
         </header>
-        <main className="flex-grow p-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Read the Quran</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>The Quran section is under development. In the meantime, you can read the Holy Quran at <a href="https://quran.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">Quran.com</a>.</p>
-            </CardContent>
-          </Card>
+        <main className="flex-grow">
+          <iframe
+            src="https://tanzil.net/#19:1"
+            className="w-full h-full border-0"
+            title="Quran Reader"
+          ></iframe>
         </main>
       </div>
     </div>
