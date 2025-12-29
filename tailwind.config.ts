@@ -10,7 +10,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Alegreya Sans"', 'Noto Kufi Arabic', 'sans-serif'],
+        sans: ['Alegreya', 'Noto Kufi Arabic', 'sans-serif'],
         body: ['Alegreya', 'Noto Kufi Arabic', 'serif'],
         headline: ['Alegreya', 'Noto Kufi Arabic', 'serif'],
         code: ['monospace'],

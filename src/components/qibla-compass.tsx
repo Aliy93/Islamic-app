@@ -60,6 +60,9 @@ export default function QiblaCompass() {
       setLocationError(t.geolocationNotSupported);
     }
     
+    // Auto-request permission on component mount
+    requestPermission();
+
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation);
     };
@@ -81,15 +84,16 @@ export default function QiblaCompass() {
     return (
         <Alert variant="destructive">
             <AlertTitle>Permission Denied</AlertTitle>
-            <AlertDescription>Compass permission was denied. Please enable it in your browser settings.</AlertDescription>
+            <AlertDescription>Compass permission was denied. Please enable it in your browser settings or grant permission when prompted.</AlertDescription>
+            <Button onClick={requestPermission} className="mt-4">Try Again</Button>
         </Alert>
     )
   }
 
   if (permissionGranted === null) {
       return (
-        <div className="text-center space-y-4">
-            <p>Please grant permission to access device orientation for the compass to work.</p>
+        <div className="text-center space-y-4 p-4">
+            <p className="font-body">Please grant permission to access device orientation for the compass to work.</p>
             <Button onClick={requestPermission}>Grant Permission</Button>
         </div>
       )
@@ -103,11 +107,11 @@ export default function QiblaCompass() {
         style={{ transform: `rotate(${compassRotation}deg)` }}
       >
         {/* Compass markings */}
-        <div className="absolute w-full h-full">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-6 text-xl font-bold text-primary">N</div>
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 -mb-6 text-xl font-bold">S</div>
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-6 text-xl font-bold">W</div>
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 -mr-6 text-xl font-bold">E</div>
+        <div className="absolute w-full h-full font-headline">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-7 text-xl font-bold text-primary">N</div>
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 -mb-7 text-xl font-bold">S</div>
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-7 text-xl font-bold">W</div>
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 -mr-7 text-xl font-bold">E</div>
         </div>
 
         {/* Qibla Pointer */}
@@ -126,8 +130,8 @@ export default function QiblaCompass() {
       </div>
       
        <div className="text-center">
-            <p className="text-muted-foreground">{lang === 'ar' ? 'اتجاه القبلة' : 'Qibla Direction'}</p>
-            <p className="text-2xl font-bold font-mono text-primary">{qiblaDirection.toFixed(0)}°</p>
+            <p className="text-muted-foreground font-body">{lang === 'ar' ? 'اتجاه القبلة' : 'Qibla Direction'}</p>
+            <p className="text-2xl font-bold font-code text-primary">{qiblaDirection.toFixed(0)}°</p>
        </div>
     </div>
   );

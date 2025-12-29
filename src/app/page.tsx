@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -137,13 +136,13 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full p-4 space-y-4" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
         <div className="bg-primary/20 text-primary-foreground p-4 rounded-lg text-center">
-            <p className="text-sm text-foreground/80">{t.timeTill}</p>
+            <p className="text-sm text-foreground/80 font-body">{t.timeTill}</p>
             <div className="flex items-center justify-center gap-2 my-1">
-                <h2 className="text-2xl font-bold text-foreground">
+                <h2 className="text-2xl font-bold text-foreground font-headline">
                   {nextPrayer ? (lang === 'ar' ? t.prayers[nextPrayer.name]?.arabic : nextPrayer.name) : t.loading}
                 </h2>
             </div>
-            <p className="text-5xl font-bold font-mono text-foreground">{timeToNextPrayer || '00:00:00'}</p>
+            <p className="text-5xl font-bold font-code text-foreground">{timeToNextPrayer || '00:00:00'}</p>
         </div>
 
         <div className="flex items-center justify-between text-center">
@@ -151,13 +150,13 @@ export default function Home() {
                 <ChevronLeft className="h-5 w-5" />
             </Button>
             <div className="text-center">
-                <p className="font-bold text-foreground">
+                <p className="font-bold text-foreground font-headline">
                     {lang === 'ar' 
-                        ? `${hijriDate.monthNameAr} ${hijriDate.day}, ${hijriDate.year} AH` 
+                        ? `${hijriDate.monthNameAr} ${hijriDate.day}, ${hijriDate.year} هـ` 
                         : `${hijriDate.monthName} ${hijriDate.day}, ${hijriDate.year} AH`
                     }
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground font-body">
                     {format(currentDate, 'eeee, d MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined })}
                 </p>
             </div>
