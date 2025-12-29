@@ -87,10 +87,10 @@ export default function Home() {
               <CalendarDays className="w-6 h-6" />
                <span className="text-xs mt-1">{t.prayer}</span>
             </Link>
-            <Button variant="ghost" className="flex flex-col h-auto items-center hover:bg-primary/80">
+            <Link href="/quran" passHref className="flex flex-col h-auto items-center justify-center gap-1.5 p-2 rounded-lg hover:bg-primary/80 text-primary-foreground no-underline">
               <BookOpen className="w-6 h-6" />
               <span className="text-xs mt-1">{t.quran}</span>
-            </Button>
+            </Link>
             <Button variant="ghost" className="flex flex-col h-auto items-center bg-black/10 rounded-lg">
               <CalendarIcon className="w-6 h-6" />
               <span className="text-xs mt-1">{t.calendar}</span>
