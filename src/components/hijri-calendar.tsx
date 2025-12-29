@@ -15,6 +15,7 @@ import { getHijriDate, HijriDateInfo, getGregorianDateFromHijri } from '@/lib/hi
 import { getEventForDate, IslamicEvent } from '@/lib/islamic-events';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { Separator } from './ui/separator';
 
 type CalendarDay = {
   gregorian: Date;
@@ -31,7 +32,7 @@ interface HijriCalendarProps {
 
 export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurrentHijriDate }: HijriCalendarProps) {
   const [hijriAdjustment, setHijriAdjustment] = useState(0);
-  const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
+  const [monthlyEvents, setMonthlyEvents] = useState<CalendarDay[]>([]);
 
   useEffect(() => {
     const savedAdjustment = localStorage.getItem('hijriAdjustment');
@@ -123,36 +124,25 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
   }, [currentHijriDate, hijriAdjustment]);
 
   useEffect(() => {
-    // Find the first event in the current month view and select it by default
-    const firstEventInView = calendarGrid
+    // Find all events in the current month view
+    const events = calendarGrid
       .flat()
-      .find(day => day.isCurrentMonth && day.event);
-    
-    if (selectedDay === null || !calendarGrid.flat().some(d => d.event && d.gregorian.getTime() === selectedDay.gregorian.getTime())) {
-        setSelectedDay(firstEventInView || null);
-    }
-
-  }, [calendarGrid, selectedDay]);
+      .filter(day => day.isCurrentMonth && day.event)
+      .sort((a,b) => a.hijri.day - b.hijri.day); // Sort by day
+    setMonthlyEvents(events);
+  }, [calendarGrid]);
 
   const handlePrevMonth = () => {
     setCurrentHijriDate(prev => {
         if (prev.month === 1) return { year: prev.year - 1, month: 12 };
         return { ...prev, month: prev.month - 1 };
     });
-    setSelectedDay(null); // Reset selection when changing months
   }
   const handleNextMonth = () => {
     setCurrentHijriDate(prev => {
         if (prev.month === 12) return { year: prev.year + 1, month: 1 };
         return { ...prev, month: prev.month + 1 };
     });
-    setSelectedDay(null); // Reset selection when changing months
-  }
-
-  const handleDayClick = (day: CalendarDay) => {
-    if (day.event) {
-        setSelectedDay(day);
-    }
   }
 
   const longWeekdays = lang === 'ar' 
@@ -218,21 +208,17 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
             {week.map((day) => (
               <div
                 key={day.gregorian.toISOString()}
-                onClick={() => handleDayClick(day)}
                 className={cn(
                   'relative p-1 h-14 flex flex-col items-center justify-center rounded-lg',
                   {
                     'text-muted-foreground/50': !day.isCurrentMonth,
                     'text-foreground': day.isCurrentMonth,
-                    'bg-accent': selectedDay?.gregorian.getTime() === day.gregorian.getTime(),
-                    'cursor-pointer': !!day.event,
                   }
                 )}
               >
                 <div className={cn(
                   'w-10 h-10 flex flex-col items-center justify-center rounded-lg transition-colors',
                    day.isCurrentMonth && isToday(day.gregorian) && 'bg-primary text-primary-foreground',
-                  day.isCurrentMonth && !isToday(day.gregorian) && !!day.event && 'hover:bg-accent/50',
                   { 'border-2 border-primary': day.isCurrentMonth && day.event }
                 )}>
                   <span className={cn(
@@ -253,29 +239,38 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
           </div>
         ))}
       </CardContent>
-      {selectedDay?.event && (
-        <CardFooter className="p-4 border-t bg-accent/50">
-            <div className="flex items-center gap-4 w-full">
-                <div className="text-center border-r-4 border-primary pr-4">
-                    <p className="text-4xl font-bold">{selectedDay.hijri.day}</p>
-                </div>
-                <div className="flex-grow">
-                    <h3 className="font-bold text-foreground">{lang === 'ar' ? selectedDay.event.nameAr : selectedDay.event.name}</h3>
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                       <span>
-                            {lang === 'ar' 
-                                ? `${selectedDay.hijri.monthNameAr} ${selectedDay.hijri.day}, ${selectedDay.hijri.year}`
-                                : `${selectedDay.hijri.day} ${selectedDay.hijri.monthName}, ${selectedDay.hijri.year}`
-                            }
-                        </span>
-                        <span>
-                            {format(selectedDay.gregorian, 'd MMMM, yyyy', { locale: lang === 'ar' ? arSA : enUS })}
-                        </span>
+      {monthlyEvents.length > 0 && (
+        <CardFooter className="p-0 border-t">
+            <div className="w-full flex flex-col">
+                {monthlyEvents.map((day, index) => (
+                    <div key={day.gregorian.toISOString()}>
+                        <div className="flex items-center gap-4 w-full p-4">
+                            <div className="text-center border-r-4 border-primary pr-4">
+                                <p className="text-3xl font-bold">{day.hijri.day}</p>
+                            </div>
+                            <div className="flex-grow">
+                                <h3 className="font-bold text-foreground">{lang === 'ar' ? day.event!.nameAr : day.event!.name}</h3>
+                                <div className="flex justify-between items-center text-sm text-muted-foreground">
+                                   <span>
+                                        {lang === 'ar' 
+                                            ? `${day.hijri.monthNameAr} ${day.hijri.day}, ${day.hijri.year}`
+                                            : `${day.hijri.day} ${day.hijri.monthName}, ${day.hijri.year}`
+                                        }
+                                    </span>
+                                    <span>
+                                        {format(day.gregorian, 'd MMMM, yyyy', { locale: lang === 'ar' ? arSA : enUS })}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {index < monthlyEvents.length - 1 && <Separator />}
                     </div>
-                </div>
+                ))}
             </div>
         </CardFooter>
       )}
     </Card>
   );
 }
+
+    
