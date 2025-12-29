@@ -101,7 +101,7 @@ export default function HijriCalendar() {
       <CardContent className="p-0">
         <div className="grid grid-cols-7 bg-card">
           {weekdays.map((day, index) => (
-            <div key={day} className="text-center font-bold text-muted-foreground py-2 sm:py-3 text-xs sm:text-sm border-b border-r last:border-r-0">
+            <div key={`${day}-${index}`} className="text-center font-bold text-muted-foreground py-2 sm:py-3 text-xs sm:text-sm border-b border-r last:border-r-0">
               <span className="sm:hidden">{day}</span>
               <span className="hidden sm:inline">{longWeekdays[index]}</span>
             </div>
