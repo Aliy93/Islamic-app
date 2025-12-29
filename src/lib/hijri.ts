@@ -1,3 +1,4 @@
+
 import { addDays, subDays } from 'date-fns';
 
 export type HijriDateInfo = {
@@ -56,9 +57,12 @@ export function getHijriDate(gregorianDate: Date, adjustment: number = 0): Hijri
  * It starts with an estimate and adjusts until it finds the correct date.
  */
 export function getGregorianDateFromHijri(year: number, month: number, day: number, adjustment: number = 0): Date {
-  // Rough estimate: Hijri year is ~354/365 the length of a Gregorian year.
-  // This gets us in the ballpark.
-  let gregorianDate = new Date((year - 1) * 354.367 + (month - 1) * 29.53 + day, 0, 1);
+  // A more stable estimation to avoid invalid dates.
+  // Start with a known Gregorian date and add Hijri days.
+  // The Hijri calendar began around July 16, 622 AD.
+  let gregorianDate = new Date('622-07-16T00:00:00Z');
+  gregorianDate = addDays(gregorianDate, (year - 1) * 354.367 + (month - 1) * 29.53 + day);
+
   
   let hijri = getHijriDate(gregorianDate, 0); // Use 0 adjustment for the search loop
 
