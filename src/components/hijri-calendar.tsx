@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -85,10 +86,10 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
         </Button>
         <div className="text-center flex-grow">
           <h2 className="font-bold text-lg text-foreground">
-            {lang === 'ar' ? `${hijriDateForHeader.day} ${hijriDateForHeader.monthNameAr} ${hijriDateForHeader.year}` : `${hijriDateForHeader.day} ${hijriDateForHeader.monthName} ${hijriDateForHeader.year}` }
+            {lang === 'ar' ? `${hijriDateForHeader.monthNameAr} ${hijriDateForHeader.year}` : `${hijriDateForHeader.monthName} ${hijriDateForHeader.year}` }
           </h2>
           <p className="text-sm text-muted-foreground">
-            {format(viewDate, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined })}
+            {format(viewDate, 'd MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined })}
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={handleNextMonth} aria-label="Next month">
