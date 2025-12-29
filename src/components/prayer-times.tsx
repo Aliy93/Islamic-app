@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Sun, Sunrise, Sunset, Moon, Bell, Thermometer } from 'lucide-react';
+import { Sun, Sunrise, Sunset, Moon } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import { useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
@@ -20,6 +20,12 @@ type PrayerTimesData = {
 type PrayerInfo = {
     name: keyof PrayerTimesData;
     begins: string;
+}
+
+type CachedPrayerData = {
+    timings: PrayerTimesData;
+    date: string;
+    location: { latitude: number; longitude: number };
 }
 
 const prayerIcons: Record<keyof PrayerTimesData, React.ReactNode> = {
@@ -52,10 +58,29 @@ export default function PrayerTimes({ currentDate: initialDate, location: initia
   }, [initialDate]);
   
   useEffect(() => {
-    setLocation(initialLocation);
+    if (initialLocation) {
+        setLocation(initialLocation);
+    } else {
+        const cachedDataStr = localStorage.getItem('prayerData');
+        if (cachedDataStr) {
+            const cachedData: CachedPrayerData = JSON.parse(cachedDataStr);
+            setLocation(cachedData.location);
+        }
+    }
   }, [initialLocation]);
 
   useEffect(() => {
+    const todayStr = format(currentDate, 'yyyy-MM-dd');
+    const cachedDataStr = localStorage.getItem('prayerData');
+    if (cachedDataStr) {
+        const cachedData: CachedPrayerData = JSON.parse(cachedDataStr);
+        if(cachedData.date === todayStr) {
+            setPrayerTimes(cachedData.timings);
+            setLoading(false);
+            return;
+        }
+    }
+
     if (!location) {
       setLoading(false);
       return;
@@ -71,6 +96,12 @@ export default function PrayerTimes({ currentDate: initialDate, location: initia
         const data = await response.json();
         if (data.code === 200) {
           setPrayerTimes(data.data.timings);
+          const newCachedData: CachedPrayerData = {
+              timings: data.data.timings,
+              date: format(currentDate, 'yyyy-MM-dd'),
+              location: location,
+          };
+          localStorage.setItem('prayerData', JSON.stringify(newCachedData));
         } else {
           throw new Error(data.data || t.fetchError);
         }

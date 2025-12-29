@@ -1,6 +1,5 @@
 'use client';
-import { ArrowLeft, Settings } from 'lucide-react';
-import Link from 'next/link';
+import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PrayerTimes from '@/components/prayer-times';
 import { useLanguage } from '@/context/language-context';

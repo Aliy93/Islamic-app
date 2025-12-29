@@ -24,6 +24,12 @@ type Prayer = {
   time: string;
 };
 
+type CachedPrayerData = {
+    timings: PrayerTimesData;
+    date: string;
+    location: { latitude: number; longitude: number };
+}
+
 export default function Home() {
   const { lang } = useLanguage();
   const t = translations[lang];
@@ -37,13 +43,25 @@ export default function Home() {
   const hijriDate = getHijriDate(currentDate);
 
   useEffect(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const cachedDataStr = localStorage.getItem('prayerData');
+
+    if (cachedDataStr) {
+      const cachedData: CachedPrayerData = JSON.parse(cachedDataStr);
+      if (cachedData.date === todayStr && cachedData.location) {
+        setLocation(cachedData.location);
+        return;
+      }
+    }
+
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setLocation({
+          const newLocation = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
-          });
+          };
+          setLocation(newLocation);
         },
         (err) => {
           setError(t.locationError);
@@ -57,6 +75,8 @@ export default function Home() {
   useEffect(() => {
     if (!location) return;
 
+    const todayStr = format(currentDate, 'yyyy-MM-dd');
+
     const fetchPrayerTimes = async () => {
       try {
         const response = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(currentDate.getTime()/1000)}?latitude=${location.latitude}&longitude=${location.longitude}&method=2`);
@@ -66,6 +86,14 @@ export default function Home() {
         if (data.code !== 200) throw new Error(data.data || t.fetchError);
 
         const timings: PrayerTimesData = data.data.timings;
+
+        const newCachedData: CachedPrayerData = {
+            timings,
+            date: todayStr,
+            location: location
+        };
+        localStorage.setItem('prayerData', JSON.stringify(newCachedData));
+        
         const prayerSchedule: Prayer[] = Object.entries(timings)
             .filter(([key]) => ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].includes(key))
             .map(([name, time]) => ({ name: name as keyof PrayerTimesData, time }));
@@ -94,8 +122,27 @@ export default function Home() {
       setNextPrayer(upcomingPrayer);
     };
 
-    fetchPrayerTimes();
-    const interval = setInterval(fetchPrayerTimes, 60000);
+    const cachedDataStr = localStorage.getItem('prayerData');
+    if (cachedDataStr) {
+        const cachedData: CachedPrayerData = JSON.parse(cachedDataStr);
+        if(cachedData.date === todayStr && cachedData.location.latitude === location.latitude && cachedData.location.longitude === location.longitude) {
+            const prayerSchedule: Prayer[] = Object.entries(cachedData.timings)
+                .filter(([key]) => ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].includes(key))
+                .map(([name, time]) => ({ name: name as keyof PrayerTimesData, time }));
+            findNextPrayer(prayerSchedule);
+        } else {
+            fetchPrayerTimes();
+        }
+    } else {
+        fetchPrayerTimes();
+    }
+    
+    const interval = setInterval(() => {
+        const prayerSchedule: Prayer[] = (Object.entries(JSON.parse(localStorage.getItem('prayerData') || '{}')?.timings || {}) as [keyof PrayerTimesData, string][])
+            .filter(([key]) => ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].includes(key))
+            .map(([name, time]) => ({ name, time }));
+        if (prayerSchedule.length > 0) findNextPrayer(prayerSchedule)
+    }, 60000);
     return () => clearInterval(interval);
 
   }, [location, currentDate, t.fetchError]);
