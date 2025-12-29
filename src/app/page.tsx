@@ -21,6 +21,19 @@ export default function Home() {
         return 'Unknown';
     }
   }
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Set to beginning of the day for accurate comparison
+
+  // NOTE: The year 2024 is hardcoded for mapping hijri events to gregorian dates.
+  // This is a simplification and will become inaccurate in other years.
+  // A more robust solution would involve a proper Hijri-Gregorian conversion library
+  // that can predict future event dates accurately.
+  const upcomingEvents = islamicEvents.filter(event => {
+    const eventDate = new Date(2024, event.month -1, event.day);
+    return eventDate >= today;
+  });
+
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans">
@@ -62,7 +75,7 @@ export default function Home() {
             <Card>
               <CardContent className="p-0">
                 <ul className="divide-y divide-border">
-                  {islamicEvents.map((event, index) => (
+                  {upcomingEvents.map((event, index) => (
                     <li key={index} className="px-4 py-3 flex justify-between items-center">
                       <div>
                         <p className="font-semibold text-foreground">{event.name}</p>
