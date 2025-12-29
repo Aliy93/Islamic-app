@@ -5,15 +5,14 @@ import {
   format,
   startOfMonth,
   eachDayOfInterval,
-  getDay,
   isToday,
   add,
   sub,
   isSameMonth,
   startOfWeek,
-  endOfMonth,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { arSA } from 'date-fns/locale/ar-SA';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getHijriDate, HijriDateInfo } from '@/lib/hijri';
 import { getEventForDate, IslamicEvent } from '@/lib/islamic-events';
@@ -26,7 +25,11 @@ type CalendarDay = {
   event: IslamicEvent | undefined;
 };
 
-export default function HijriCalendar() {
+interface HijriCalendarProps {
+    lang: 'en' | 'ar';
+}
+
+export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
   const [viewDate, setViewDate] = useState(new Date());
   const [hijriAdjustment, setHijriAdjustment] = useState(0);
 
@@ -37,14 +40,10 @@ export default function HijriCalendar() {
     }
   }, []);
 
-  const handleSetAdjustment = (adj: number) => {
-    setHijriAdjustment(adj);
-    localStorage.setItem('hijriAdjustment', adj.toString());
-  };
 
   const calendarGrid = useMemo((): CalendarDay[][] => {
     const monthStart = startOfMonth(viewDate);
-    const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 }); // Sunday
+    const gridStart = startOfWeek(monthStart, { weekStartsOn: lang === 'ar' ? 6 : 0 }); // Saturday for AR, Sunday for EN
 
     const days = Array.from({ length: 42 }, (_, i) => add(gridStart, { days: i }));
 
@@ -63,12 +62,18 @@ export default function HijriCalendar() {
         weeks.push(weekDays);
     }
     return weeks;
-}, [viewDate, hijriAdjustment]);
+}, [viewDate, hijriAdjustment, lang]);
 
   const handlePrevMonth = () => setViewDate(sub(viewDate, { months: 1 }));
   const handleNextMonth = () => setViewDate(add(viewDate, { months: 1 }));
 
-  const longWeekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const longWeekdays = lang === 'ar' 
+    ? ['سبت', 'أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة'] 
+    : ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+  if (lang === 'en') {
+      longWeekdays.unshift(longWeekdays.pop()!);
+  }
 
   const hijriDateForHeader = getHijriDate(viewDate, hijriAdjustment);
 
@@ -80,10 +85,10 @@ export default function HijriCalendar() {
         </Button>
         <div className="text-center flex-grow">
           <h2 className="font-bold text-lg text-foreground">
-            {hijriDateForHeader.day} {hijriDateForHeader.monthName} {hijriDateForHeader.year}
+            {lang === 'ar' ? `${hijriDateForHeader.day} ${hijriDateForHeader.monthNameAr} ${hijriDateForHeader.year}` : `${hijriDateForHeader.day} ${hijriDateForHeader.monthName} ${hijriDateForHeader.year}` }
           </h2>
           <p className="text-sm text-muted-foreground">
-            {format(viewDate, 'MMMM yyyy')}
+            {format(viewDate, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined })}
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={handleNextMonth} aria-label="Next month">
@@ -100,7 +105,7 @@ export default function HijriCalendar() {
       <div className="p-2">
         {calendarGrid.map((week, weekIndex) => (
           <div key={weekIndex} className="grid grid-cols-7 text-center">
-            {week.map((day, dayIndex) => (
+            {week.map((day) => (
               <div
                 key={day.gregorian.toISOString()}
                 className={cn(
@@ -118,8 +123,7 @@ export default function HijriCalendar() {
                   { 'border border-primary': day.event }
                 )}>
                   <span className={cn(
-                      'font-medium text-sm',
-                      {'text-red-500': dayIndex === 0 && day.isCurrentMonth, 'text-blue-500': dayIndex === 6 && day.isCurrentMonth}
+                      'font-medium text-sm'
                   )}>
                     {format(day.gregorian, 'd')}
                   </span>
