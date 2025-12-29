@@ -68,6 +68,14 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
     return weeks;
 }, [viewDate, hijriAdjustment]);
 
+  useEffect(() => {
+    // Find the first event in the current month view and select it by default
+    const firstEventInView = calendarGrid
+      .flat()
+      .find(day => day.isCurrentMonth && day.event);
+    setSelectedDay(firstEventInView || null);
+  }, [calendarGrid]);
+
   const handlePrevMonth = () => {
     setViewDate(sub(viewDate, { months: 1 }));
     setSelectedDay(null);
@@ -136,18 +144,19 @@ export default function HijriCalendar({ lang = 'en' }: HijriCalendarProps) {
                 key={day.gregorian.toISOString()}
                 onClick={() => handleDayClick(day)}
                 className={cn(
-                  'relative p-1 h-14 flex flex-col items-center justify-center rounded-full cursor-pointer',
+                  'relative p-1 h-14 flex flex-col items-center justify-center rounded-full',
                   {
                     'text-muted-foreground/50': !day.isCurrentMonth,
                     'text-foreground': day.isCurrentMonth,
-                    'bg-accent': selectedDay?.gregorian.getTime() === day.gregorian.getTime()
+                    'bg-accent': selectedDay?.gregorian.getTime() === day.gregorian.getTime(),
+                    'cursor-pointer': !!day.event,
                   }
                 )}
               >
                 <div className={cn(
                   'w-8 h-8 flex flex-col items-center justify-center rounded-full transition-colors',
                   day.isCurrentMonth && isToday(day.gregorian) && 'bg-primary text-primary-foreground',
-                  day.isCurrentMonth && !isToday(day.gregorian) && 'hover:bg-accent/50',
+                  day.isCurrentMonth && !isToday(day.gregorian) && !!day.event && 'hover:bg-accent/50',
                   { 'border-2 border-primary': day.event }
                 )}>
                   <span className={cn(
