@@ -180,7 +180,7 @@ export default function Home() {
                 )}
             </div>
 
-            <div className="w-full bg-card p-2 rounded-lg shadow-md grid grid-cols-3 gap-2 text-center">
+            <div className="w-full bg-card p-2 rounded-lg shadow-md grid grid-cols-4 gap-2 text-center">
                 <Link href="/qibla" passHref className="flex flex-col h-auto items-center justify-center gap-1.5 p-3 rounded-lg hover:bg-accent/20 no-underline text-foreground">
                   <Compass className="w-6 h-6 text-primary" />
                   <span className="text-sm mt-1 font-semibold">{t.qibla}</span>
@@ -188,6 +188,10 @@ export default function Home() {
                 <Link href="/prayer" passHref className="flex flex-col h-auto items-center justify-center gap-1.5 p-3 rounded-lg hover:bg-accent/20 no-underline text-foreground">
                   <CalendarDays className="w-6 h-6 text-primary" />
                    <span className="text-sm mt-1 font-semibold">{t.prayer}</span>
+                </Link>
+                <Link href="/calendar" passHref className="flex flex-col h-auto items-center justify-center gap-1.5 p-3 rounded-lg hover:bg-accent/20 no-underline text-foreground">
+                  <CalendarDays className="w-6 h-6 text-primary" />
+                   <span className="text-sm mt-1 font-semibold">{t.calendar}</span>
                 </Link>
                 <Link href="/quran" passHref className="flex flex-col h-auto items-center justify-center gap-1.5 p-3 rounded-lg hover:bg-accent/20 no-underline text-foreground">
                   <BookOpen className="w-6 h-6 text-primary" />
