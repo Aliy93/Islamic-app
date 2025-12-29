@@ -181,7 +181,7 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
     <Card className="bg-card rounded-lg shadow">
       <CardHeader className="flex flex-row items-center justify-between gap-4 p-4">
         <Button variant="ghost" size="icon" onClick={handlePrevMonth} aria-label="Previous month">
-          <ChevronLeft className="h-6 w-6 text-foreground" />
+          {lang === 'ar' ? <ChevronRight className="h-6 w-6 text-foreground" /> : <ChevronLeft className="h-6 w-6 text-foreground" />}
         </Button>
         <div className="text-center flex-grow">
           <h2 className="font-bold text-lg text-foreground">
@@ -192,7 +192,7 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={handleNextMonth} aria-label="Next month">
-          <ChevronRight className="h-6 w-6 text-foreground" />
+          {lang === 'ar' ? <ChevronLeft className="h-6 w-6 text-foreground" /> : <ChevronRight className="h-6 w-6 text-foreground" />}
         </Button>
       </CardHeader>
       
