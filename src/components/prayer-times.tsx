@@ -1,12 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Sun, Sunrise, Sunset, Moon, Cloudy } from 'lucide-react';
+import { Sun, Sunrise, Sunset, Moon, Bell, DivideCircle, Thermometer } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import { useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
 
 type PrayerTimesData = {
   Fajr: string;
@@ -17,62 +17,50 @@ type PrayerTimesData = {
   Isha: string;
 };
 
-const prayerIcons = {
-    Fajr: <Sunrise className="w-5 h-5 text-primary" />,
-    Sunrise: <Sunrise className="w-5 h-5 text-yellow-500" />,
-    Dhuhr: <Sun className="w-5 h-5 text-primary" />,
-    Asr: <Cloudy className="w-5 h-5 text-primary" />,
-    Maghrib: <Sunset className="w-5 h-5 text-primary" />,
-    Isha: <Moon className="w-5 h-5 text-primary" />,
+type PrayerInfo = {
+    name: keyof PrayerTimesData;
+    begins: string;
+    jamaah: string;
+}
+
+const prayerIcons: Record<keyof PrayerTimesData, React.ReactNode> = {
+    Fajr: <Moon className="w-5 h-5" />,
+    Sunrise: <Sunrise className="w-5 h-5" />,
+    Dhuhr: <Sun className="w-5 h-5" />,
+    Asr: <Thermometer className="w-5 h-5" />,
+    Maghrib: <Sunset className="w-5 h-5" />,
+    Isha: <Moon className="w-5 h-5" />,
 };
 
-export default function PrayerTimes() {
+interface PrayerTimesProps {
+    currentDate?: Date;
+    location?: { latitude: number; longitude: number } | null;
+    nextPrayerName?: string;
+}
+
+export default function PrayerTimes({ currentDate = new Date(), location = null, nextPrayerName }: PrayerTimesProps) {
   const { lang } = useLanguage();
   const t = translations[lang];
 
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-
-  useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-        },
-        (error) => {
-          setError('Could not get location. Please enable location services in your browser.');
-          setLoading(false);
-        }
-      );
-    } else {
-      setError('Geolocation is not supported by your browser.');
-      setLoading(false);
-    }
-  }, []);
-
+  
   useEffect(() => {
     if (location) {
       const fetchPrayerTimes = async () => {
         setLoading(true);
         setError(null);
         try {
-          const date = new Date();
-          const response = await fetch(`https://api.aladhan.com/v1/timings/${date.getTime()/1000}?latitude=${location.latitude}&longitude=${location.longitude}&method=2`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch prayer times.');
-          }
+          const response = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(currentDate.getTime()/1000)}?latitude=${location.latitude}&longitude=${location.longitude}&method=2`);
+          if (!response.ok) throw new Error(t.fetchError);
+          
           const data = await response.json();
           if (data.code === 200) {
             setPrayerTimes(data.data.timings);
           } else {
-            throw new Error(data.data || 'Failed to fetch prayer times.');
+            throw new Error(data.data || t.fetchError);
           }
-          
         } catch (err: any) {
           setError(err.message);
         } finally {
@@ -81,26 +69,18 @@ export default function PrayerTimes() {
       };
 
       fetchPrayerTimes();
+    } else {
+        setLoading(false);
     }
-  }, [location]);
+  }, [location, currentDate, t.fetchError]);
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.todayPrayerTimes}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="flex justify-between items-center">
-                <Skeleton className="h-5 w-20" />
-                <Skeleton className="h-5 w-24" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-2">
+        {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+        ))}
+      </div>
     );
   }
 
@@ -114,31 +94,57 @@ export default function PrayerTimes() {
   }
 
   if (!prayerTimes) {
-    return null;
+    return (
+         <Alert>
+            <AlertTitle>{t.locationNeeded}</AlertTitle>
+            <AlertDescription>{t.locationNeededMsg}</AlertDescription>
+        </Alert>
+    );
   }
   
-  const prayerSchedule = Object.entries(prayerTimes)
-    .filter(([key]) => key === 'Fajr' || key === 'Sunrise' || key === 'Dhuhr' || key === 'Asr' || key === 'Maghrib' || key === 'Isha')
-    .map(([name, time]) => ({ name: name as keyof typeof prayerIcons, time: format(parse(time, 'HH:mm', new Date()), 'h:mm a') }));
+  const prayerSchedule: PrayerInfo[] = (Object.keys(prayerIcons) as Array<keyof PrayerTimesData>).map(name => {
+    const time24 = prayerTimes[name];
+    const beginsTime = parse(time24, 'HH:mm', new Date());
+    // Jama'ah is just an example, you might get this from an API or calculate it
+    const jamaahTime = new Date(beginsTime.getTime() + 10 * 60000); 
+
+    return {
+        name,
+        begins: format(beginsTime, 'h:mm a'),
+        jamaah: format(jamaahTime, 'h:mm a'),
+    }
+  });
+
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t.todayPrayerTimes}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ul className="divide-y divide-border">
-            {prayerSchedule.map(({name, time}) => (
-                <li key={name} className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3">
-                        {prayerIcons[name]}
-                        <span className="font-semibold capitalize text-foreground">{t.prayers[name]}</span>
+    <ul className="space-y-2">
+        {prayerSchedule.map((prayer) => (
+            <li key={prayer.name} className={cn(
+                "flex items-center justify-between p-3 rounded-lg text-foreground transition-colors",
+                prayer.name === nextPrayerName ? 'bg-primary text-primary-foreground' : 'bg-card'
+            )}>
+                <div className="flex items-center gap-3">
+                    <Bell className="w-5 h-5 opacity-50" />
+                    <div className="text-sm">
+                        <p className="font-semibold">{t.prayers[prayer.name]?.begins || 'Begins'}</p>
+                        <p className="font-mono">{prayer.begins}</p>
                     </div>
-                    <span className="font-mono text-lg text-muted-foreground">{time}</span>
-                </li>
-            ))}
-        </ul>
-      </CardContent>
-    </Card>
+                     <div className="text-sm">
+                        <p className="font-semibold">{t.prayers[prayer.name]?.jamaah || 'Jama\'ah'}</p>
+                        <p className="font-mono">{prayer.jamaah}</p>
+                    </div>
+                </div>
+                 <div className="flex items-center gap-3 text-right">
+                    <div className={cn("text-right", lang === 'ar' ? 'ml-2' : 'mr-2')}>
+                        <p className="font-bold">{lang === 'ar' ? t.prayers[prayer.name]?.arabic : prayer.name}</p>
+                        <p className="text-xs opacity-80">{lang === 'ar' ? prayer.name : t.prayers[prayer.name]?.arabic}</p>
+                    </div>
+                     <div className={cn(prayer.name === nextPrayerName ? 'text-primary-foreground' : 'text-primary')}>
+                        {prayerIcons[prayer.name]}
+                    </div>
+                </div>
+            </li>
+        ))}
+    </ul>
   );
 }

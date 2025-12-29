@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from '@/context/language-context';
+import BottomNav from '@/components/bottom-nav';
 
 export const metadata: Metadata = {
   title: 'Muslim App',
@@ -20,10 +21,13 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500;700&family=Noto+Kufi+Arabic:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-sans antialiased bg-gray-100 dark:bg-gray-900">
+      <body className="font-sans antialiased">
         <LanguageProvider>
-          <div className="max-w-md mx-auto bg-white dark:bg-black shadow-lg min-h-screen">
-            {children}
+          <div className="max-w-md mx-auto bg-background shadow-lg min-h-screen flex flex-col">
+            <main className="flex-grow pb-20">
+              {children}
+            </main>
+            <BottomNav />
           </div>
           <Toaster />
         </LanguageProvider>

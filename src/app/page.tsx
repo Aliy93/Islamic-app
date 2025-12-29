@@ -1,20 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Menu, Compass, CalendarDays, BookOpen, Globe, Sun, Sunrise, Sunset, Moon, Cloudy } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
 import { getHijriDate } from '@/lib/hijri';
-import { format, parse } from 'date-fns';
+import { format, parse, addDays, differenceInSeconds } from 'date-fns';
 import { arSA } from 'date-fns/locale/ar-SA';
-import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import PrayerTimes from '@/components/prayer-times';
 
 type PrayerTimesData = {
   Fajr: string;
   Sunrise: string;
   Dhuhr: string;
-  Asr: string;
+  Asr:string;
   Maghrib: string;
   Isha: string;
 };
@@ -24,23 +24,17 @@ type Prayer = {
   time: string;
 };
 
-const prayerIcons: Record<keyof PrayerTimesData, JSX.Element> = {
-    Fajr: <Sunrise className="w-8 h-8" />,
-    Sunrise: <Sunrise className="w-8 h-8" />,
-    Dhuhr: <Sun className="w-8 h-8" />,
-    Asr: <Cloudy className="w-8 h-8" />,
-    Maghrib: <Sunset className="w-8 h-8" />,
-    Isha: <Moon className="w-8 h-8" />,
-};
-
 export default function Home() {
-  const { lang, toggleLang } = useLanguage();
+  const { lang } = useLanguage();
   const t = translations[lang];
 
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [nextPrayer, setNextPrayer] = useState<Prayer | null>(null);
   const [timeToNextPrayer, setTimeToNextPrayer] = useState('');
+  
+  const hijriDate = getHijriDate(currentDate);
 
   useEffect(() => {
     if ('geolocation' in navigator) {
@@ -51,26 +45,25 @@ export default function Home() {
             longitude: position.coords.longitude,
           });
         },
-        (error) => {
-          setError('Could not get location. Please enable location services.');
+        (err) => {
+          setError(t.locationError);
         }
       );
     } else {
-      setError('Geolocation is not supported by your browser.');
+      setError(t.geolocationNotSupported);
     }
-  }, []);
+  }, [t.locationError, t.geolocationNotSupported]);
 
   useEffect(() => {
     if (!location) return;
 
-    const fetchAndProcessPrayerTimes = async () => {
+    const fetchPrayerTimes = async () => {
       try {
-        const date = new Date();
-        const response = await fetch(`https://api.aladhan.com/v1/timings/${date.getTime()/1000}?latitude=${location.latitude}&longitude=${location.longitude}&method=2`);
-        if (!response.ok) throw new Error('Failed to fetch prayer times.');
+        const response = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(currentDate.getTime()/1000)}?latitude=${location.latitude}&longitude=${location.longitude}&method=2`);
+        if (!response.ok) throw new Error(t.fetchError);
         
         const data = await response.json();
-        if (data.code !== 200) throw new Error(data.data || 'Failed to fetch prayer times.');
+        if (data.code !== 200) throw new Error(data.data || t.fetchError);
 
         const timings: PrayerTimesData = data.data.timings;
         const prayerSchedule: Prayer[] = Object.entries(timings)
@@ -78,127 +71,103 @@ export default function Home() {
             .map(([name, time]) => ({ name: name as keyof PrayerTimesData, time }));
 
         findNextPrayer(prayerSchedule);
-
       } catch (err: any) {
         setError(err.message);
       }
     };
-
+  
     const findNextPrayer = (prayerSchedule: Prayer[]) => {
-        const now = new Date();
-        let upcomingPrayer: Prayer | null = null;
+      const now = new Date(); // Use current time for countdown logic
+      let upcomingPrayer: Prayer | null = null;
+  
+      for (const prayer of prayerSchedule) {
+        const prayerTime = parse(prayer.time, 'HH:mm', now);
+        if (prayerTime > now) {
+          upcomingPrayer = prayer;
+          break;
+        }
+      }
 
-        for (const prayer of prayerSchedule) {
-            const prayerTime = parse(prayer.time, 'HH:mm', new Date());
-            if (prayerTime > now) {
-                upcomingPrayer = prayer;
-                break;
-            }
-        }
-        // If all prayers for today are done, the next prayer is Fajr tomorrow
-        if (!upcomingPrayer) {
-             upcomingPrayer = prayerSchedule[0];
-             const fajrTime = parse(upcomingPrayer.time, 'HH:mm', new Date());
-             fajrTime.setDate(fajrTime.getDate() + 1);
-        }
-        
-        setNextPrayer(upcomingPrayer);
+      if (!upcomingPrayer) {
+        upcomingPrayer = prayerSchedule[0];
+      }
+      setNextPrayer(upcomingPrayer);
     };
 
-    fetchAndProcessPrayerTimes();
-
-    const interval = setInterval(fetchAndProcessPrayerTimes, 60000); // Re-check every minute
+    fetchPrayerTimes();
+    const interval = setInterval(fetchPrayerTimes, 60000);
     return () => clearInterval(interval);
 
-  }, [location]);
+  }, [location, currentDate, t.fetchError]);
 
   useEffect(() => {
-      if (!nextPrayer) return;
-      
-      const calculateCountdown = () => {
-          const now = new Date();
-          let prayerTime = parse(nextPrayer.time, 'HH:mm', new Date());
+    if (!nextPrayer) return;
+    
+    const calculateCountdown = () => {
+        const now = new Date();
+        let prayerTime = parse(nextPrayer.time, 'HH:mm', new Date());
 
-          if (prayerTime < now) { // If next prayer is tomorrow (e.g., Fajr)
-              prayerTime.setDate(prayerTime.getDate() + 1);
-          }
+        if (prayerTime < now) { 
+            prayerTime = addDays(prayerTime, 1);
+        }
 
-          const diff = prayerTime.getTime() - now.getTime();
-          const hours = Math.floor(diff / (1000 * 60 * 60));
-          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const diff = differenceInSeconds(prayerTime, now);
+        if (diff < 0) { // Should not happen with the logic above, but as a safeguard
+             setTimeToNextPrayer('00:00:00');
+             return;
+        }
+        const hours = Math.floor(diff / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
 
-          setTimeToNextPrayer(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
-      };
+        setTimeToNextPrayer(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+    };
 
-      calculateCountdown();
-      const countdownInterval = setInterval(calculateCountdown, 1000);
-      return () => clearInterval(countdownInterval);
+    calculateCountdown();
+    const countdownInterval = setInterval(calculateCountdown, 1000);
+    return () => clearInterval(countdownInterval);
 
   }, [nextPrayer]);
 
-
-  const today = new Date();
-  const hijriDate = getHijriDate(today);
+  const handleDateChange = (direction: 'next' | 'prev') => {
+    setCurrentDate(prevDate => addDays(prevDate, direction === 'next' ? 1 : -1));
+  };
 
   return (
-    <div className="min-h-screen" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-        <header className="bg-primary text-primary-foreground p-4 flex items-center justify-between">
-          <Button variant="ghost" size="icon" className="hover:bg-primary/80">
-            <Menu />
-          </Button>
-          <h1 className="text-xl font-bold">{t.title}</h1>
-          <Button variant="ghost" size="icon" className="hover:bg-primary/80" onClick={toggleLang}>
-            <Globe />
-          </Button>
-        </header>
+    <div className="flex flex-col h-full p-4 space-y-4" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="bg-primary/20 text-primary-foreground p-4 rounded-lg text-center">
+            <p className="text-sm text-foreground/80">{t.timeTill}</p>
+            <div className="flex items-center justify-center gap-2 my-1">
+                <h2 className="text-2xl font-bold text-foreground">{nextPrayer ? t.prayers[nextPrayer.name] : ''}</h2>
+                 {lang === 'en' && nextPrayer && <span className="text-2xl font-bold text-foreground">|</span>}
+                <h2 className="text-2xl font-bold text-foreground">{nextPrayer ? (lang === 'ar' ? t.prayers[nextPrayer.name] : nextPrayer.name) : t.loading}</h2>
+            </div>
+            <p className="text-5xl font-bold font-mono text-foreground">{timeToNextPrayer || '00:00:00'}</p>
+        </div>
 
-        <main className="p-4 flex flex-col items-center text-center">
-            <div className="w-full bg-card p-6 rounded-lg shadow-md mb-4 text-center">
-                <h2 className="text-2xl font-bold text-foreground">
-                    {format(today, 'eeee, MMMM d', { locale: lang === 'ar' ? arSA : undefined })}
-                </h2>
-                <p className="text-lg text-muted-foreground">
-                    {lang === 'ar' ? `${hijriDate.day} ${hijriDate.monthNameAr} ${hijriDate.year}` : `${hijriDate.day} ${hijriDate.monthName} ${hijriDate.year}`}
+        <div className="flex items-center justify-between text-center">
+            <Button variant="ghost" size="icon" onClick={() => handleDateChange('prev')}>
+                <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div className="text-center">
+                <p className="font-bold text-foreground">
+                    {lang === 'ar' 
+                        ? `${hijriDate.monthNameAr} ${hijriDate.day}, ${hijriDate.year} AH` 
+                        : `${hijriDate.monthName} ${hijriDate.day}, ${hijriDate.year} AH`
+                    }
+                </p>
+                <p className="text-sm text-muted-foreground">
+                    {format(currentDate, 'eeee, d MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined })}
                 </p>
             </div>
-            
-            <div className="w-full bg-primary text-primary-foreground p-6 rounded-lg shadow-md mb-4 flex flex-col items-center">
-                {error && <p className="text-destructive-foreground">{error}</p>}
-                {!error && nextPrayer ? (
-                    <>
-                        <p className="text-lg font-medium opacity-80">{t.nextPrayer}</p>
-                        <div className="flex items-center gap-4 my-2">
-                           {prayerIcons[nextPrayer.name]}
-                           <h3 className="text-4xl font-bold">{t.prayers[nextPrayer.name]}</h3>
-                        </div>
-                        <p className="text-2xl font-mono">{format(parse(nextPrayer.time, 'HH:mm', new Date()), 'h:mm a')}</p>
-                        <p className="text-lg font-medium mt-4 opacity-80">{t.timeUntil}</p>
-                        <p className="text-5xl font-bold font-mono">{timeToNextPrayer}</p>
-                    </>
-                ) : (
-                    <p>{t.loading}</p>
-                )}
-            </div>
+            <Button variant="ghost" size="icon" onClick={() => handleDateChange('next')}>
+                <ChevronRight className="h-5 w-5" />
+            </Button>
+        </div>
+        
+        {error && <p className="text-destructive text-center">{error}</p>}
 
-            <div className="w-full bg-card p-2 rounded-lg shadow-md grid grid-cols-4 gap-2 text-center">
-                <Link href="/qibla" passHref className="flex flex-col h-auto items-center justify-center gap-1.5 p-3 rounded-lg hover:bg-accent/20 no-underline text-foreground">
-                  <Compass className="w-6 h-6 text-primary" />
-                  <span className="text-sm mt-1 font-semibold">{t.qibla}</span>
-                </Link>
-                <Link href="/prayer" passHref className="flex flex-col h-auto items-center justify-center gap-1.5 p-3 rounded-lg hover:bg-accent/20 no-underline text-foreground">
-                  <CalendarDays className="w-6 h-6 text-primary" />
-                   <span className="text-sm mt-1 font-semibold">{t.prayer}</span>
-                </Link>
-                <Link href="/calendar" passHref className="flex flex-col h-auto items-center justify-center gap-1.5 p-3 rounded-lg hover:bg-accent/20 no-underline text-foreground">
-                  <CalendarDays className="w-6 h-6 text-primary" />
-                   <span className="text-sm mt-1 font-semibold">{t.calendar}</span>
-                </Link>
-                <Link href="/quran" passHref className="flex flex-col h-auto items-center justify-center gap-1.5 p-3 rounded-lg hover:bg-accent/20 no-underline text-foreground">
-                  <BookOpen className="w-6 h-6 text-primary" />
-                  <span className="text-sm mt-1 font-semibold">{t.quran}</span>
-                </Link>
-            </div>
-        </main>
+        <PrayerTimes currentDate={currentDate} location={location} nextPrayerName={nextPrayer?.name} />
     </div>
   );
 }
