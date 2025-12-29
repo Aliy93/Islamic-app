@@ -10,6 +10,8 @@ import { Button } from './ui/button';
 import { toArabicNumerals } from '@/lib/utils';
 import { Skeleton } from './ui/skeleton';
 
+type PermissionState = 'granted' | 'denied' | 'prompt';
+
 export default function QiblaCompass() {
   const { lang } = useLanguage();
   const t = translations[lang];
@@ -17,83 +19,89 @@ export default function QiblaCompass() {
 
   const [qiblaDirection, setQiblaDirection] = useState<number>(0);
   const [heading, setHeading] = useState<number | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
+  const [permissionState, setPermissionState] = useState<PermissionState>('prompt');
+  const [isCalibrating, setIsCalibrating] = useState(true);
 
   const handleOrientation = useCallback((event: DeviceOrientationEvent) => {
-    const compassHeading = (event as any).webkitCompassHeading || event.alpha;
+    const compassHeading = (event as any).webkitCompassHeading ?? event.alpha;
     if (compassHeading !== null) {
       setHeading(compassHeading);
+      if (isCalibrating) {
+        setIsCalibrating(false);
+      }
+    }
+  }, [isCalibrating]);
+  
+  const requestPermission = useCallback(async () => {
+    if (typeof (DeviceOrientationEvent as any).requestPermission !== 'function') {
+      // For non-iOS 13+ browsers
+      setPermissionState('granted');
+      return;
+    }
+
+    try {
+      const state: PermissionState = await (DeviceOrientationEvent as any).requestPermission();
+      setPermissionState(state);
+    } catch (error) {
+      console.error(error);
+      setPermissionState('denied');
     }
   }, []);
 
-  const requestPermission = useCallback(() => {
-    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-      (DeviceOrientationEvent as any).requestPermission()
-        .then((permissionState: 'granted' | 'denied' | 'prompt') => {
-          if (permissionState === 'granted') {
-            setPermissionGranted(true);
-            window.addEventListener('deviceorientation', handleOrientation);
-          } else {
-            setPermissionGranted(false);
-          }
-        })
-        .catch(console.error);
-    } else {
-      // For non-iOS 13+ browsers that don't require explicit permission
-      setPermissionGranted(true);
-      window.addEventListener('deviceorientation', handleOrientation);
-    }
-  }, [handleOrientation]);
-
   useEffect(() => {
-    fetchAndSetLocation(); // Always fetch fresh location for Qibla
-    
-    // Auto-request on load only if not explicitly denied before
-    if(permissionGranted !== false) {
-        requestPermission();
+    if (permissionState === 'granted') {
+      window.addEventListener('deviceorientation', handleOrientation);
+      // Fetch location only after permission is granted
+      fetchAndSetLocation();
     }
-
+    
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation);
     };
-     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [permissionState, handleOrientation, fetchAndSetLocation]);
 
   useEffect(() => {
-    if (settingsLocationError) {
-      setLocationError(settingsLocationError);
-    } else if (location) {
+    if (location) {
       const qibla = calculateQiblaDirection(location.latitude, location.longitude);
       setQiblaDirection(qibla);
-      setLocationError(null);
     }
-  }, [location, settingsLocationError]);
-
+  }, [location]);
 
   const compassRotation = heading !== null ? 360 - heading : 0;
   const qiblaPointerRotation = heading !== null ? qiblaDirection - heading : qiblaDirection;
 
-  if (locationError) {
+  if (settingsLocationError) {
     return (
       <Alert variant="destructive">
         <AlertTitle>{t.locationNeeded}</AlertTitle>
-        <AlertDescription>{locationError}</AlertDescription>
+        <AlertDescription>
+          {settingsLocationError}
+           <Button onClick={fetchAndSetLocation} className="mt-4">Try Again</Button>
+        </AlertDescription>
       </Alert>
     );
   }
   
-  if (permissionGranted === false) {
+  if (permissionState === 'denied') {
     return (
         <Alert variant="destructive">
             <AlertTitle>Permission Denied</AlertTitle>
-            <AlertDescription>Compass permission was denied. Please enable it in your browser settings or grant permission when prompted.</AlertDescription>
-            <Button onClick={requestPermission} className="mt-4">Try Again</Button>
+            <AlertDescription>Compass permission was denied. Please enable it in your browser settings.</AlertDescription>
+            <Button onClick={requestPermission} className="mt-4">Request Permission</Button>
         </Alert>
     )
   }
 
-  if (permissionGranted === null || heading === null) {
+  if (permissionState === 'prompt') {
+     return (
+        <div className="text-center space-y-4 p-4">
+            <p className="font-body">{t.permissionNeeded}</p>
+            <Button onClick={requestPermission}>{t.grantPermission}</Button>
+        </div>
+    );
+  }
+
+  if (isCalibrating || heading === null || !location) {
       return (
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
             <Skeleton className="w-64 h-64 rounded-full" />
@@ -101,15 +109,9 @@ export default function QiblaCompass() {
                 <Skeleton className="h-6 w-40" />
                 <Skeleton className="h-10 w-24 mx-auto" />
             </div>
-            {permissionGranted === null && (
-                 <div className="text-center space-y-4 p-4">
-                    <p className="font-body">{t.permissionNeeded}</p>
-                    <Button onClick={requestPermission}>{t.grantPermission}</Button>
-                </div>
-            )}
-            {permissionGranted === true && heading === null && (
-                <p className="font-body animate-pulse">{t.calibrating}</p>
-            )}
+            <p className="font-body animate-pulse">
+                {!location ? 'Getting location...' : t.calibrating}
+            </p>
         </div>
       )
   }
