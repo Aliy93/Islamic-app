@@ -3,9 +3,16 @@ import HijriCalendar from '@/components/hijri-calendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { islamicEvents } from '@/lib/islamic-events';
-import { format } from 'date-fns';
+import { format, setMonth } from 'date-fns';
 
 export default function Home() {
+  const getHijriMonthName = (month: number) => {
+    // We can create a dummy date and set the month to get the correct Hijri month name.
+    // The year and day don't matter here.
+    const dateForMonth = new Date(2024, month - 1, 1);
+    return new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { month: 'long' }).format(dateForMonth);
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans">
       <div className="max-w-md mx-auto bg-white dark:bg-black shadow-lg">
@@ -46,7 +53,7 @@ export default function Home() {
                     <li key={index} className="px-4 py-3 flex justify-between items-center">
                       <div>
                         <p className="font-semibold text-foreground">{event.name}</p>
-                        <p className="text-sm text-muted-foreground">{event.day} {new Intl.DisplayNames(['en'], { type: 'month' }).of(String(event.month))} 1445</p>
+                        <p className="text-sm text-muted-foreground">{event.day} {getHijriMonthName(event.month)} 1445</p>
                       </div>
                       <span className="text-sm font-medium text-primary">{format(new Date(2024, event.month - 1, event.day), "dd MMMM yyyy")}</span>
                     </li>
