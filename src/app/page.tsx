@@ -14,15 +14,18 @@ export default function Home() {
   const [lang, setLang] = useState<'en' | 'ar'>('en');
 
   const getHijriMonthName = (month: number) => {
-    const dateForMonth = new Date(2024, 0, 15);
-    dateForMonth.setMonth(month - 1);
+    const dateForMonth = new Date();
+    dateForMonth.setMonth(month -1); // month is 1-indexed
     
     try {
         const locale = lang === 'ar' ? 'ar-u-ca-islamic-umalqura' : 'en-u-ca-islamic-umalqura';
         return new Intl.DateTimeFormat(locale, { month: 'long' }).format(dateForMonth);
     } catch (e) {
         console.error(e);
-        return 'Unknown';
+        // Fallback for invalid month
+        const fallbackDate = new Date(2024, 0, 15); // A known valid date
+        const locale = lang === 'ar' ? 'ar-u-ca-islamic-umalqura' : 'en-u-ca-islamic-umalqura';
+        return new Intl.DateTimeFormat(locale, { month: 'long' }).format(fallbackDate);
     }
   }
   
@@ -30,8 +33,11 @@ export default function Home() {
   today.setHours(0, 0, 0, 0);
 
   const upcomingEvents = islamicEvents.filter(event => {
-    const eventDate = new Date(2024, event.month -1, event.day);
-    return eventDate >= today;
+    const eventDate = new Date(1445, event.month -1, event.day);
+    // This is not a perfect conversion, but for filtering it's okay for now
+    // A proper Hijri to Gregorian conversion would be needed for accuracy
+    const approxGregorian = new Date(2024, event.month - 1, event.day);
+    return approxGregorian >= today;
   });
 
   const toggleLang = () => {
@@ -77,10 +83,10 @@ export default function Home() {
               <Compass className="w-6 h-6" />
               <span className="text-xs mt-1">{t.qibla}</span>
             </Link>
-            <Button variant="ghost" className="flex flex-col h-auto items-center hover:bg-primary/80">
+            <Link href="/prayer" passHref className="flex flex-col h-auto items-center justify-center gap-1.5 p-2 rounded-lg hover:bg-primary/80 text-primary-foreground no-underline">
               <CalendarDays className="w-6 h-6" />
                <span className="text-xs mt-1">{t.prayer}</span>
-            </Button>
+            </Link>
             <Button variant="ghost" className="flex flex-col h-auto items-center hover:bg-primary/80">
               <BookOpen className="w-6 h-6" />
               <span className="text-xs mt-1">{t.quran}</span>
