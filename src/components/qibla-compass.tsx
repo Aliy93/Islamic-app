@@ -8,7 +8,8 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Compass, Zap, Ban, Navigation } from 'lucide-react';
 import { toArabicNumerals } from '@/lib/utils';
 import { useSettings } from '@/context/settings-context';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 // Kaaba SVG Icon
 const KaabaIcon = () => (
@@ -79,7 +80,14 @@ export default function QiblaCompass() {
     isLoading,
     qiblaRotation,
     compassHeading,
+    declination,
+    setManualDeclination,
+    autoDetectDeclination,
+    rawSensor,
   } = useQibla();
+
+  const { toast } = useToast();
+  const [calibrationToastShown, setCalibrationToastShown] = useState(false);
 
   const t = translations[lang];
 
@@ -88,6 +96,22 @@ export default function QiblaCompass() {
       fetchAndSetLocation();
     }
   }, [location, locationError, fetchAndSetLocation]);
+
+  // Show a one-time toast when device provides usable orientation (calibrated)
+  useEffect(() => {
+    if (
+      permissionState === 'granted' &&
+      rawSensor.alpha != null &&
+      (rawSensor.absolute === true || rawSensor.webkit != null) &&
+      !calibrationToastShown
+    ) {
+      toast({
+        title: 'Compass calibrated',
+        description: 'Calibration successful. Compass accuracy should improve.',
+      });
+      setCalibrationToastShown(true);
+    }
+  }, [permissionState, rawSensor, calibrationToastShown, toast]);
 
   const renderContent = () => {
     if (isLoading) {
@@ -138,6 +162,13 @@ export default function QiblaCompass() {
 
     return (
       <div className="flex flex-col items-center justify-center gap-6">
+        {permissionState === 'granted' && (rawSensor.alpha == null || rawSensor.absolute === false) && (
+          <Alert>
+            <Zap className="w-4 h-4" />
+            <AlertTitle>{t.calibratingTitle}</AlertTitle>
+            <AlertDescription>{t.calibrating}</AlertDescription>
+          </Alert>
+        )}
         <div className="relative w-80 h-80">
           <div
             className="relative w-full h-full rounded-full transition-transform duration-200 ease-in-out"
@@ -204,6 +235,32 @@ export default function QiblaCompass() {
           <p className="text-5xl font-bold">
             {lang === 'ar' ? toArabicNumerals(qiblaDirection.toFixed(0)) : qiblaDirection.toFixed(0)}°
           </p>
+        </div>
+        <div className="w-80 text-sm text-primary space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="font-medium">Declination</span>
+            <span>{declination?.toFixed(2) ?? '0.00'}°</span>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => autoDetectDeclination()} className="flex-1">{t.autoDetect || 'Auto-detect'}</Button>
+            <Button onClick={() => {
+              const input = prompt('Enter magnetic declination in degrees (positive east):', String(declination ?? 0));
+              if (input !== null) {
+                const v = parseFloat(input);
+                if (!isNaN(v)) setManualDeclination(v);
+              }
+            }} className="flex-1">{t.setDeclination || 'Set'}</Button>
+          </div>
+
+          <details className="mt-2 text-xs text-muted-foreground">
+            <summary className="cursor-pointer">Sensor debug</summary>
+            <div className="mt-2">
+              <div>Compass: {compassHeading.toFixed(1)}°</div>
+              <div>alpha: {rawSensor.alpha ?? 'n/a'}</div>
+              <div>absolute: {String(rawSensor.absolute)}</div>
+              <div>webkitCompassHeading: {rawSensor.webkit ?? 'n/a'}</div>
+            </div>
+          </details>
         </div>
       </div>
     );
