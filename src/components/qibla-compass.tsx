@@ -18,24 +18,23 @@ const KaabaIcon = () => (
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full"
-    style={{ color: '#00332C' }}
+    className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full text-primary"
   >
     <path
       d="M3.75 3.75L12 2L20.25 3.75L12 5.5L3.75 3.75Z"
       fill="currentColor"
-      stroke="black"
+      stroke="hsl(var(--foreground))"
       strokeWidth="1"
       strokeLinejoin="round"
     />
     <path
       d="M3.75 3.75V17.25L12 22L20.25 17.25V3.75"
-      stroke="black"
+      stroke="hsl(var(--foreground))"
       strokeWidth="1"
       strokeLinejoin="round"
     />
-    <path d="M20.25 3.75L12 5.5L3.75 3.75" stroke="black" strokeWidth="1" strokeLinejoin="round" />
-    <path d="M12 22V5.5" stroke="black" strokeWidth="1" strokeLinejoin="round" />
+    <path d="M20.25 3.75L12 5.5L3.75 3.75" stroke="hsl(var(--foreground))" strokeWidth="1" strokeLinejoin="round" />
+    <path d="M12 22V5.5" stroke="hsl(var(--foreground))" strokeWidth="1" strokeLinejoin="round" />
   </svg>
 );
 
@@ -93,9 +92,9 @@ export default function QiblaCompass() {
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="text-center space-y-2">
-          <Compass className="w-12 h-12 mx-auto animate-pulse" style={{ color: '#00332C' }} />
-          <p className="font-semibold" style={{ color: '#00332C' }}>
+        <div className="text-center space-y-2 text-primary">
+          <Compass className="w-12 h-12 mx-auto animate-pulse" />
+          <p className="font-semibold">
             {t.loading}
           </p>
         </div>
@@ -151,34 +150,29 @@ export default function QiblaCompass() {
                 style={{ transform: `rotate(${i * 3}deg)` }}
               >
                 <div
-                  className={`mx-auto ${i % 15 === 0 ? 'h-5 w-0.5' : 'h-3 w-px'}`}
-                  style={{ backgroundColor: '#00332C' }}
+                  className={`mx-auto bg-primary ${i % 15 === 0 ? 'h-5 w-0.5' : 'h-3 w-px'}`}
                 ></div>
               </div>
             ))}
 
             {/* Cardinal Directions */}
             <span
-              className="absolute top-6 left-1/2 -translate-x-1/2 font-bold text-xl"
-              style={{ color: '#00332C' }}
+              className="absolute top-6 left-1/2 -translate-x-1/2 font-bold text-xl text-primary"
             >
               N
             </span>
             <span
-              className="absolute bottom-6 left-1/2 -translate-x-1/2 font-bold text-xl"
-              style={{ color: '#00332C' }}
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 font-bold text-xl text-primary"
             >
               S
             </span>
             <span
-              className="absolute left-6 top-1/2 -translate-y-1/2 font-bold text-xl"
-              style={{ color: '#00332C' }}
+              className="absolute left-6 top-1/2 -translate-y-1/2 font-bold text-xl text-primary"
             >
               W
             </span>
             <span
-              className="absolute right-6 top-1/2 -translate-y-1/2 font-bold text-xl"
-              style={{ color: '#00332C' }}
+              className="absolute right-6 top-1/2 -translate-y-1/2 font-bold text-xl text-primary"
             >
               E
             </span>
@@ -198,16 +192,16 @@ export default function QiblaCompass() {
           </div>
           
            {/* Pivot Point */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#333] z-10 border-2 border-gray-400"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-primary z-10 border-2 border-primary-foreground"></div>
 
 
         </div>
 
-        <div className="text-center">
-          <h2 className="text-lg font-semibold" style={{ color: '#00332C' }}>
+        <div className="text-center text-primary">
+          <h2 className="text-lg font-semibold">
             {t.qiblaDirection}
           </h2>
-          <p className="text-5xl font-bold" style={{ color: '#00332C' }}>
+          <p className="text-5xl font-bold">
             {lang === 'ar' ? toArabicNumerals(qiblaDirection.toFixed(0)) : qiblaDirection.toFixed(0)}°
           </p>
         </div>
