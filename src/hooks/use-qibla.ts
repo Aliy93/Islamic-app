@@ -16,6 +16,7 @@ export function useQibla() {
 
   const headingBuffer = useState<number[]>(() => [])[0];
   const [rawSensor, setRawSensor] = useState<{ alpha?: number | null; absolute?: boolean | null; webkit?: number | null }>({});
+  const [isDetecting, setIsDetecting] = useState(false);
 
   const handleDeviceOrientation = useCallback((event: DeviceOrientationEvent) => {
     let heading: number | null = null;
@@ -133,37 +134,108 @@ export function useQibla() {
     try {
       const url = `https://www.ngdc.noaa.gov/geomag-web/calculators/calculateDeclination?lat1=${location.latitude}&lon1=${location.longitude}&resultFormat=json`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch declination');
-      const data = await res.json();
-      let dec: number | null = null;
-      if (Array.isArray(data.result) && data.result.length > 0 && typeof data.result[0].declination === 'number') {
-        dec = data.result[0].declination;
-      } else if (data.declination && typeof data.declination === 'number') {
-        dec = data.declination;
+      if (res.ok) {
+        const data = await res.json();
+        let dec: number | null = null;
+        if (Array.isArray(data.result) && data.result.length > 0 && typeof data.result[0].declination === 'number') {
+          dec = data.result[0].declination;
+        } else if (data.declination && typeof data.declination === 'number') {
+          dec = data.declination;
+        }
+        if (dec === null) dec = getMagneticDeclination(location.latitude, location.longitude);
+        setDeclination(dec);
+        setQiblaDirection((calculateQibla(location.latitude, location.longitude) - dec + 360) % 360);
+        return;
       }
-      if (dec === null) dec = getMagneticDeclination(location.latitude, location.longitude);
+      // fallback to local approximation if network/API fails
+      const dec = getMagneticDeclination(location.latitude, location.longitude);
       setDeclination(dec);
       setQiblaDirection((calculateQibla(location.latitude, location.longitude) - dec + 360) % 360);
     } catch (e: any) {
-      setError(`Auto-detect failed: ${e?.message ?? e}`);
+      // Do not treat declination fetch failure as fatal — use local fallback
+      const dec = getMagneticDeclination(location.latitude, location.longitude);
+      setDeclination(dec);
+      setQiblaDirection((calculateQibla(location.latitude, location.longitude) - dec + 360) % 360);
     }
   }, [location]);
-
   // Attempt to detect magnetic north using device Magnetometer + Accelerometer (tilt compensated)
   const startMagneticAutoDetect = useCallback(async (options?: { samples?: number; frequency?: number }) => {
     const samplesTarget = options?.samples ?? 30;
     const freq = options?.frequency ?? 10;
     if (typeof window === 'undefined') return;
 
+    setIsDetecting(true);
+
     const win: any = window;
     if (!('Magnetometer' in win) || !('Accelerometer' in win)) {
-      setError('Magnetometer/Accelerometer not supported in this browser.');
+      // If Generic Sensor API is not available, fall back to DeviceOrientation sampling
+      // as a best-effort estimate so the feature doesn't fail silently.
+      try {
+        const readings: number[] = [];
+        let count = 0;
+        const onDO = (ev: DeviceOrientationEvent) => {
+          let heading: number | null = null;
+          if ('webkitCompassHeading' in ev && (ev as any).webkitCompassHeading != null) {
+            heading = (ev as any).webkitCompassHeading;
+          } else if (ev.alpha != null) {
+            const rawAlpha = ev.alpha as number;
+            const orientationAngle = (typeof window !== 'undefined' && (screen as any)?.orientation && typeof (screen as any).orientation.angle === 'number')
+              ? (screen as any).orientation.angle
+              : (typeof (window as any).orientation === 'number' ? (window as any).orientation : 0);
+            let normalized = 360 - rawAlpha;
+            normalized = (normalized + orientationAngle) % 360;
+            heading = normalized;
+          }
+          if (heading != null) {
+            readings.push(heading);
+            count++;
+          }
+          if (count >= (options?.samples ?? 30)) {
+            window.removeEventListener('deviceorientation', onDO);
+            const avg = readings.reduce((s, v) => s + v, 0) / readings.length;
+            setCompassHeading(avg);
+            setIsDetecting(false);
+          }
+        };
+        window.addEventListener('deviceorientation', onDO as any);
+        // safety timeout
+        setTimeout(() => {
+          try { window.removeEventListener('deviceorientation', onDO as any); } catch {}
+          if (readings.length > 0) {
+            const avg = readings.reduce((s, v) => s + v, 0) / readings.length;
+            setCompassHeading(avg);
+          } else {
+            setError('DeviceOrientation unavailable for fallback detection.');
+          }
+          setIsDetecting(false);
+        }, ((options?.samples ?? 30) * (1000 / (options?.frequency ?? 10))) + 2000);
+      } catch (e: any) {
+        setError('Magnetometer/Accelerometer not supported in this browser.');
+        setIsDetecting(false);
+      }
       return;
     }
 
+    // Track detecting state
+    let accel: any = null;
+    let magnet: any = null;
     try {
-      const accel = new win.Accelerometer({ frequency: freq });
-      const magnet = new win.Magnetometer({ frequency: freq });
+      // Check permissions when available
+      try {
+        const perms = (navigator as any).permissions;
+        if (perms && typeof perms.query === 'function') {
+          try {
+            const pm = await perms.query({ name: 'magnetometer' } as any);
+            if (pm.state === 'denied') {
+              setError('Magnetometer permission denied. Please enable sensor permissions.');
+              return;
+            }
+          } catch {}
+        }
+      } catch {}
+
+      accel = new win.Accelerometer({ frequency: freq });
+      magnet = new win.Magnetometer({ frequency: freq });
 
       const readings: number[] = [];
 
@@ -191,11 +263,11 @@ export function useQibla() {
         if (readings.length >= samplesTarget) {
           const avg = readings.reduce((s, v) => s + v, 0) / readings.length;
           setCompassHeading(avg);
-          // stop sensors
-          magnet.removeEventListener('reading', onReading);
-          accel.removeEventListener('reading', onReading);
+          try { magnet.removeEventListener('reading', onReading); } catch {}
+          try { accel.removeEventListener('reading', onReading); } catch {}
           try { magnet.stop(); } catch {}
           try { accel.stop(); } catch {}
+          setIsDetecting(false);
         }
       };
 
@@ -206,8 +278,12 @@ export function useQibla() {
       await magnet.start();
     } catch (e: any) {
       setError(`Magnetic auto-detect failed: ${e?.message ?? e}`);
+      try { if (magnet && typeof magnet.stop === 'function') magnet.stop(); } catch {}
+      try { if (accel && typeof accel.stop === 'function') accel.stop(); } catch {}
+      setIsDetecting(false);
     }
   }, []);
+
 
   return {
     qiblaDirection,
@@ -222,5 +298,6 @@ export function useQibla() {
     autoDetectDeclination,
     rawSensor,
     startMagneticAutoDetect,
+    isDetecting,
   };
 }

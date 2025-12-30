@@ -56,6 +56,9 @@ export const translations = {
     detectHelpTitle: "How to detect magnetic north",
     detectHelpBody: "Hold the device flat, keep it away from metal and magnets, then slowly rotate it or move it in a figure-eight pattern while the detection runs.",
     detectStart: "Start Detection"
+    ,
+    cancel: "Cancel",
+    detecting: "Detecting..."
 
   },
   ar: {
@@ -114,5 +117,8 @@ export const translations = {
     detectHelpTitle: "كيفية كشف الشمال المغناطيسي",
     detectHelpBody: "امسك الجهاز مستوياً، وابتعد عن المعادن والمواد المغناطيسية، ثم قم بتدويره ببطء أو حرّكه في نمط الرقم ثمانية أثناء تشغيل الكشف.",
     detectStart: "بدء الكشف"
+    ,
+    cancel: "إلغاء",
+    detecting: "جارٍ الكشف..."
   }
 };

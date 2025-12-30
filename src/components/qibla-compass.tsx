@@ -86,6 +86,7 @@ export default function QiblaCompass() {
     autoDetectDeclination,
     rawSensor,
     startMagneticAutoDetect,
+    isDetecting,
   } = useQibla();
 
   const { toast } = useToast();
@@ -115,6 +116,17 @@ export default function QiblaCompass() {
       setCalibrationToastShown(true);
     }
   }, [permissionState, rawSensor, calibrationToastShown, toast]);
+
+  // Show error toasts for qibla errors
+  useEffect(() => {
+    if (qiblaError) {
+      toast({
+        variant: 'destructive',
+        title: 'Compass error',
+        description: qiblaError,
+      });
+    }
+  }, [qiblaError, toast]);
 
   const renderContent = () => {
     if (isLoading) {
@@ -254,8 +266,8 @@ export default function QiblaCompass() {
               }
             }} className="flex-1">{t.setDeclination || 'Set'}</Button>
           </div>
-          <div className="mt-2">
-            <Button variant="secondary" onClick={() => setDetectDialogOpen(true)} className="w-full">{t.detectStart || 'Detect Magnetic North'}</Button>
+            <div className="mt-2">
+            <Button variant="secondary" onClick={() => setDetectDialogOpen(true)} className="w-full" disabled={isDetecting}>{isDetecting ? (t.detecting || 'Detecting...') : (t.detectStart || 'Detect Magnetic North')}</Button>
           </div>
           <Dialog open={detectDialogOpen} onOpenChange={setDetectDialogOpen}>
             <DialogContent>
