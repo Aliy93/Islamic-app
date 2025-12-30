@@ -42,9 +42,14 @@ export const translations = {
     latitude: "Latitude",
     longitude: "Longitude",
     useCurrentLocation: "Use Current Location",
-    permissionNeeded: "Please grant permission to access device orientation for the compass to work.",
+    permissionNeeded: "Qibla direction requires access to your device's orientation sensors. Please grant permission to continue.",
     grantPermission: "Grant Permission",
-    calibrating: "Calibrating compass... Please move your device in a figure-eight pattern.",
+    calibrating: "To improve accuracy, please move your device in a figure-eight pattern.",
+    calibratingTitle: "Calibrating Compass...",
+    qiblaDirection: "Qibla Direction",
+    qiblaErrorTitle: "Compass Error",
+    permissionPrompt: "Awaiting permission to access device sensors. Please approve the request from your browser.",
+    permissionPromptTitle: "Permission Required"
 
   },
   ar: {
@@ -89,8 +94,13 @@ export const translations = {
     latitude: "خط العرض",
     longitude: "خط الطول",
     useCurrentLocation: "استخدام الموقع الحالي",
-    permissionNeeded: "يرجى منح الإذن للوصول إلى اتجاه الجهاز حتى تعمل البوصلة.",
+    permissionNeeded: "يتطلب اتجاه القبلة الوصول إلى مستشعرات اتجاه جهازك. يرجى منح الإذن للمتابعة.",
     grantPermission: "منح الإذن",
-    calibrating: "جارٍ معايرة البوصلة... يرجى تحريك جهازك على شكل الرقم ثمانية.",
+    calibrating: "لتحسين الدقة، يرجى تحريك جهازك على شكل الرقم ثمانية باللغة الإنجليزية (8).",
+    calibratingTitle: "جارٍ معايرة البوصلة...",
+    qiblaDirection: "اتجاه القبلة",
+    qiblaErrorTitle: "خطأ في البوصلة",
+    permissionPrompt: "في انتظار الإذن للوصول إلى مستشعرات الجهاز. يرجى الموافقة على الطلب من متصفحك.",
+    permissionPromptTitle: "الإذن مطلوب"
   }
 };
