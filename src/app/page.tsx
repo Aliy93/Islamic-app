@@ -44,6 +44,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [nextPrayer, setNextPrayer] = useState<Prayer | null>(null);
   const [timeToNextPrayer, setTimeToNextPrayer] = useState('');
+  const [mounted, setMounted] = useState(false);
   
   const hijriDate = getHijriDate(currentDate);
 
@@ -51,6 +52,8 @@ export default function Home() {
     if (locationError) {
       setError(locationError);
     }
+    // mark mounted to avoid hydration mismatch for locale-dependent rendering
+    setMounted(true);
   }, [locationError])
 
   useEffect(() => {
@@ -186,13 +189,14 @@ export default function Home() {
             </Button>
             <div className="text-center">
                 <p className="font-bold text-foreground font-headline">
-                    {lang === 'ar' 
-                        ? `${hijriDate.monthNameAr} ${toArabicNumerals(hijriDate.day)}, ${toArabicNumerals(hijriDate.year)} هـ` 
-                        : `${hijriDate.monthName} ${hijriDate.day}, ${hijriDate.year} AH`
-                    }
+                  {mounted ? (
+                    lang === 'ar' 
+                    ? `${hijriDate.monthNameAr} ${toArabicNumerals(hijriDate.day)}, ${toArabicNumerals(hijriDate.year)} هـ` 
+                    : `${hijriDate.monthName} ${hijriDate.day}, ${hijriDate.year} AH`
+                  ) : t.loading}
                 </p>
                 <p className="text-sm text-muted-foreground font-body">
-                    {format(currentDate, 'eeee, d MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined })}
+                  {mounted ? format(currentDate, 'eeee, d MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined }) : ''}
                 </p>
             </div>
             <Button variant="ghost" size="icon" onClick={() => handleDateChange('next')}>
