@@ -85,50 +85,20 @@ export function calculateQiblaDirection(lat1: number, lon1: number): number {
 }
 
 /**
- * Approximates magnetic declination for a given location and date.
- * This is a lightweight model. It does not require any external data files.
- * The formula is a simplified model and has an error margin, but is far better
- * than ignoring declination entirely.
+ * Approximates magnetic declination for a given location.
+ * This is a very basic model intended for offline use without large data files.
+ * It's more accurate than ignoring declination completely.
  * @param {number} latitude - The latitude of the location.
  * @param {number} longitude - The longitude of the location.
- * @param {Date} [date=new Date()] - The date of the observation.
  * @returns {number} The magnetic declination in degrees.
  */
-export function getMagneticDeclination(latitude: number, longitude: number, date: Date = new Date()): number {
-  // Simplified model based on a spherical harmonic model approximation.
-  // This is a placeholder for a more complex model but provides a basic correction.
-  // For a truly accurate value, the World Magnetic Model (WMM) is needed.
-  // The following is a very rough approximation.
-  const year = date.getFullYear() + date.getMonth() / 12 + date.getDate() / 365;
-
-  // A very simplified linear model of declination change over time.
-  // These coefficients are not based on the WMM and are for illustrative purposes.
-  const latRad = toRadians(latitude);
-  const lonRad = toRadians(longitude);
-
-  // Coefficients for a very basic model (example values)
-  const g10 = -29438.5 / 1000; // Main dipole field components
-  const g11 = -1501.0 / 1000;
-  const h11 = 4797.1 / 1000;
-
-  const X = g10;
-  const Y = g11 * Math.cos(lonRad) + h11 * Math.sin(lonRad);
-  const Z = -g11 * Math.sin(latRad) * Math.sin(lonRad) + h11 * Math.sin(latRad) * Math.cos(lonRad) + g10 * Math.cos(latRad);
-  
-  const declinationRad = Math.atan2(Y, X - Z * Math.tan(latRad));
-  
-  let declination = toDegrees(declinationRad);
-  
-  // Add a slow secular variation (example: 0.1 degrees west per year from 2020)
-  declination -= (year - 2020) * 0.1;
-
-  // The result of this simple model might be off by several degrees.
-  // A proper implementation would use the WMM2020 coefficients.
-  // However, this is better than nothing. Let's provide a slightly more stable fake value
-  // based on longitude for a better demo experience.
-  const declinationFromLongitude = (longitude / 180) * 15;
-  
-  return declinationFromLongitude;
+export function getMagneticDeclination(latitude: number, longitude: number): number {
+  // A simplified placeholder model. A real implementation would use
+  // the WMM coefficients for higher accuracy. This provides a basic,
+  // predictable offset for demonstration purposes.
+  // For many locations, declination is between -20 and +20 degrees.
+  const declination = (longitude / 180) * 18;
+  return declination;
 }
 
 

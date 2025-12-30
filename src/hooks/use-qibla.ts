@@ -19,7 +19,7 @@ export type PermissionState = 'idle' | 'prompt' | 'granted' | 'denied';
 
 // --- The Hook ---
 export function useQibla(): QiblaHook {
-  const { location, locationError } = useSettings();
+  const { location, locationError, fetchAndSetLocation } = useSettings();
   
   // Qibla Direction (Bearing)
   const [qiblaDirection, setQiblaDirection] = useState(0); 
@@ -39,8 +39,7 @@ export function useQibla(): QiblaHook {
     if (location) {
       const qibla = calculateQiblaDirection(location.latitude, location.longitude);
       const declination = getMagneticDeclination(location.latitude, location.longitude);
-      // Adjust Qibla direction by magnetic declination to align with compass's magnetic north
-      setQiblaDirection(qibla + declination);
+      setQiblaDirection((qibla + declination + 360) % 360);
     } else if (locationError) {
       setError(locationError);
     }
@@ -49,29 +48,36 @@ export function useQibla(): QiblaHook {
 
   // --- 2. Handle Device Orientation Events ---
   const handleDeviceOrientation = useCallback((event: DeviceOrientationEvent) => {
+    let heading = null;
     // For iOS 13+ devices
     if ((event as any).webkitCompassHeading) {
-      const heading = (event as any).webkitCompassHeading;
-      setCompassHeading(heading);
-      if (isCalibrating) setIsCalibrating(false);
-      return;
+      heading = (event as any).webkitCompassHeading;
+    }
+    // For other browsers
+    else if (event.alpha !== null) {
+      // The alpha value is the compass direction in degrees, 0-360
+      // We need to adjust it based on the screen orientation
+      heading = (360 - event.alpha);
     }
     
-    // For other browsers
-    if (event.alpha !== null) {
-      const heading = 360 - event.alpha;
-      setCompassHeading(heading);
-      if (isCalibrating) setIsCalibrating(false);
+    if (heading !== null) {
+        setCompassHeading(heading);
+        if(isCalibrating) {
+            // After first successful reading, stop showing calibration message.
+            setTimeout(() => setIsCalibrating(false), 2000); 
+        }
     }
   }, [isCalibrating]);
   
   
   // --- 3. Request Sensor Permissions ---
   const requestPermission = useCallback(async () => {
-    // Check if it's iOS 13+
+    setError(null);
+    setPermissionState('prompt');
+    
+    // Check if it's iOS 13+ which requires explicit permission
     if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
       try {
-        setPermissionState('prompt');
         const status = await (DeviceOrientationEvent as any).requestPermission();
         if (status === 'granted') {
           setPermissionState('granted');
@@ -85,11 +91,16 @@ export function useQibla(): QiblaHook {
         setPermissionState('denied');
       }
     } else {
-      // For non-iOS 13+ devices, permission is usually granted by default or on page load
+      // For other devices (Android, etc.), permission is usually handled by the browser automatically
+      // or doesn't require a specific JS call. We assume it's granted and add the listener.
       setPermissionState('granted');
       window.addEventListener('deviceorientation', handleDeviceOrientation);
     }
-  }, [handleDeviceOrientation]);
+
+    if (!location && !locationError) {
+        fetchAndSetLocation();
+    }
+  }, [handleDeviceOrientation, location, locationError, fetchAndSetLocation]);
 
   // --- 4. Cleanup ---
   useEffect(() => {
@@ -116,32 +127,3 @@ export function useQibla(): QiblaHook {
     requestPermission,
   };
 }
-
-/**
- * React Native / Expo Notes:
- * 
- * 1.  **Dependencies**: `expo install expo-sensors`
- * 2.  **Permissions**: Add ` "ios": { "infoPlist": { "NSMotionUsageDescription": "..." } } ` to `app.json`.
- * 3.  **Usage**:
- *     ```javascript
- *     import { Magnetometer } from 'expo-sensors';
- * 
- *     useEffect(() => {
- *       Magnetometer.setUpdateInterval(100);
- *       const subscription = Magnetometer.addListener(data => {
- *         if (data) {
- *           const { x, y } = data;
- *           let angle = Math.atan2(y, x);
- *           let heading = (angle * 180) / Math.PI - 90;
- *           if (heading < 0) {
- *             heading += 360;
- *           }
- *           setCompassHeading(heading);
- *         }
- *       });
- *       return () => subscription.remove();
- *     }, []);
- *     ```
- * 4.  **Qibla Logic**: The `calculateQiblaDirection` and `getMagneticDeclination` functions
- *     from `src/lib/qibla.ts` can be used directly in your React Native project.
- */
