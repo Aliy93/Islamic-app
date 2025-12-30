@@ -6,11 +6,12 @@ import { calculateQibla, getMagneticDeclination, smoothCompass } from '@/lib/qib
 type PermissionState = 'prompt' | 'granted' | 'denied';
 
 export function useQibla() {
-  const { location } = useSettings();
+  const { location, locationError } = useSettings();
   const [qiblaDirection, setQiblaDirection] = useState<number>(0);
   const [compassHeading, setCompassHeading] = useState<number>(0);
   const [permissionState, setPermissionState] = useState<PermissionState>('prompt');
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const headingBuffer = useState<number[]>(() => [])[0];
 
@@ -23,27 +24,22 @@ export function useQibla() {
     } 
     // For other devices
     else if (event.alpha !== null) {
-        // The `alpha` value is the rotation around the z-axis, reported in degrees (0-360).
-        // It's often relative to the initial orientation, so we must check `absolute`.
         if (event.absolute) {
             heading = 360 - event.alpha;
         } else {
-             // For non-absolute orientation, this is trickier.
-             // Often, `alpha` gives the compass heading directly on Android.
              heading = event.alpha;
         }
     }
 
     if (heading !== null) {
-      const declination = location ? getMagneticDeclination(location.latitude, location.longitude) : 0;
-      const trueHeading = (heading + declination + 360) % 360;
-      const smoothedHeading = smoothCompass(trueHeading, headingBuffer, 10);
+      // NOTE: We do NOT correct for magnetic declination here.
+      // The requirement is to point relative to MAGNETIC NORTH.
+      const smoothedHeading = smoothCompass(heading, headingBuffer, 10);
       setCompassHeading(smoothedHeading);
     }
-  }, [location, headingBuffer]);
+  }, [headingBuffer]);
 
   const requestPermission = useCallback(async () => {
-    // For iOS 13+
     if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
       try {
         const response = await (DeviceOrientationEvent as any).requestPermission();
@@ -66,17 +62,22 @@ export function useQibla() {
   }, [handleDeviceOrientation]);
 
   useEffect(() => {
-    if (location) {
-      const direction = calculateQibla(location.latitude, location.longitude);
-      setQiblaDirection(direction);
+    if(location) {
+        const direction = calculateQibla(location.latitude, location.longitude);
+        const declination = getMagneticDeclination(location.latitude, location.longitude);
+        const magneticQibla = (direction - declination + 360) % 360;
+        setQiblaDirection(magneticQibla);
+        setIsLoading(false);
+    } else {
+        setIsLoading(true);
     }
 
     return () => {
       window.removeEventListener('deviceorientation', handleDeviceOrientation);
     };
   }, [location, handleDeviceOrientation]);
-
-  const compassRotation = 360 - compassHeading;
+  
+  // Calculate final rotation for the UI needle
   const qiblaRotation = (qiblaDirection - compassHeading + 360) % 360;
 
   return {
@@ -85,8 +86,7 @@ export function useQibla() {
     permissionState,
     requestPermission,
     error,
-    isLoading: !location && permissionState !== 'denied',
-    compassRotation,
+    isLoading: isLoading || (!location && !locationError),
     qiblaRotation,
   };
 }

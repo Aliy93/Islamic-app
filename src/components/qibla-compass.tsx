@@ -30,7 +30,7 @@ export default function QiblaCompass() {
     requestPermission,
     error: qiblaError,
     isLoading,
-    compassHeading,
+    qiblaRotation,
   } = useQibla();
 
   const t = translations[lang];
@@ -86,9 +86,6 @@ export default function QiblaCompass() {
        )
     }
     
-    const needleRotation = 360 - compassHeading;
-    const qiblaMarkerRotation = (qiblaDirection + 360) % 360;
-    
     return (
       <div className="flex flex-col items-center justify-center gap-6">
         <div 
@@ -96,8 +93,7 @@ export default function QiblaCompass() {
         >
             <div className="absolute inset-0">
                 <div 
-                  className="relative w-full h-full rounded-full transition-transform duration-200 ease-linear"
-                  style={{ transform: `rotate(${needleRotation}deg)`}}
+                  className="relative w-full h-full rounded-full"
                   >
                   {/* Outer Ticks */}
                   {Array.from({ length: 120 }).map((_, i) => (
@@ -112,13 +108,13 @@ export default function QiblaCompass() {
 
                   {/* Cardinal Directions */}
                   <span className="absolute top-6 left-1/2 -translate-x-1/2 font-bold text-xl" style={{color: '#00332C'}}>N</span>
-                  <span className="absolute top-16 left-1/2 text-xs font-bold -translate-x-1/2" style={{color: '#00332C', transform: `translateX(-50%) rotate(${-needleRotation}deg)`}}>NE</span>
+                  <span className="absolute top-16 left-1/2 text-xs font-bold -translate-x-1/2" style={{color: '#00332C'}}>NE</span>
                   <span className="absolute bottom-6 left-1/2 -translate-x-1/2 font-bold text-xl" style={{color: '#00332C'}}>S</span>
-                  <span className="absolute bottom-16 left-1/2 text-xs font-bold -translate-x-1/2" style={{color: '#00332C', transform: `translateX(-50%) rotate(${-needleRotation}deg)`}}>SW</span>
+                  <span className="absolute bottom-16 left-1/2 text-xs font-bold -translate-x-1/2" style={{color: '#00332C'}}>SW</span>
                   <span className="absolute left-6 top-1/2 -translate-y-1/2 font-bold text-xl" style={{color: '#00332C'}}>W</span>
-                  <span className="absolute left-16 top-1/2 text-xs font-bold -translate-y-1/2" style={{color: '#00332C', transform: `translateY(-50%) rotate(${-needleRotation}deg)`}}>NW</span>
+                  <span className="absolute left-16 top-1/2 text-xs font-bold -translate-y-1/2" style={{color: '#00332C'}}>NW</span>
                   <span className="absolute right-6 top-1/2 -translate-y-1/2 font-bold text-xl" style={{color: '#00332C'}}>E</span>
-                  <span className="absolute right-16 top-1/2 text-xs font-bold -translate-y-1/2" style={{color: '#00332C', transform: `translateY(-50%) rotate(${-needleRotation}deg)`}}>SE</span>
+                  <span className="absolute right-16 top-1/2 text-xs font-bold -translate-y-1/2" style={{color: '#00332C'}}>SE</span>
 
                 </div>
             </div>
@@ -148,36 +144,22 @@ export default function QiblaCompass() {
                 <circle cx="50" cy="50" r="35" fill="none" stroke="#00332C" strokeWidth="0.5" strokeDasharray="1 1" />
             </svg>
 
-            {/* Qibla Marker */}
-            <div className="absolute inset-0 flex items-center justify-center transition-transform duration-200 ease-in-out"
-              style={{ transform: `rotate(${qiblaMarkerRotation}deg)` }}>
-                <KaabaIcon />
-            </div>
             
-            {/* Compass Needle */}
+            {/* Qibla Needle */}
             <div
               className="absolute inset-0 flex items-center justify-center transition-transform duration-200 ease-in-out"
-              style={{ transform: `rotate(${needleRotation}deg)` }}
+              style={{ transform: `rotate(${qiblaRotation}deg)` }}
             >
               <div className="relative w-4 h-64">
-                {/* Red part (North) */}
+                 <KaabaIcon />
+                {/* Gold part (Qibla) */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-0" style={{
                   borderLeft: '8px solid transparent',
                   borderRight: '8px solid transparent',
-                  borderBottom: '96px solid #C43C3C'
+                  borderBottom: '96px solid #C4A83C'
                 }}></div>
-                {/* Blue part (South) */}
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0" style={{
-                  borderLeft: '8px solid transparent',
-                  borderRight: '8px solid transparent',
-                  borderTop: '96px solid #3C70C4'
-                }}></div>
-                {/* Pivot */}
-                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full" style={{backgroundColor: '#333'}}></div>
-                 {/* Counter-weight on red side */}
-                 <div className="absolute top-16 left-1/2 -translate-x-1/2 w-6 h-4" style={{backgroundColor: '#C43C3C', clipPath: 'polygon(0% 0%, 100% 0%, 80% 100%, 20% 100%)'}}></div>
-                 <div className="absolute top-20 left-1/2 -translate-x-1/2 w-6 h-4 bg-yellow-400" style={{clipPath: 'polygon(20% 0, 80% 0, 60% 100%, 40% 100%)'}}></div>
-
+                 {/* Pivot */}
+                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#333]"></div>
               </div>
             </div>
 
@@ -196,5 +178,3 @@ export default function QiblaCompass() {
 
   return <>{renderContent()}</>;
 }
-
-    
