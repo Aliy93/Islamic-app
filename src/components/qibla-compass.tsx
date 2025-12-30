@@ -45,15 +45,15 @@ export default function QiblaCompass() {
     if (isLoading) {
       return (
         <div className="text-center space-y-2">
-          <Compass className="w-12 h-12 mx-auto animate-pulse" />
-          <p className="font-semibold">{t.loading}</p>
+          <Compass className="w-12 h-12 mx-auto animate-pulse" style={{color: '#00332C'}} />
+          <p className="font-semibold" style={{color: '#00332C'}}>{t.loading}</p>
         </div>
       );
     }
     
-    if (!location && locationError) {
+    if (locationError && !location) {
        return (
-            <Alert>
+            <Alert variant="destructive">
                 <Ban className="w-4 h-4"/>
                 <AlertTitle>{t.locationNeeded}</AlertTitle>
                 <AlertDescription>
