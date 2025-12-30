@@ -1,12 +1,33 @@
 'use client';
 import { useEffect } from 'react';
-import { Compass, CircleAlert, CheckCircle } from 'lucide-react';
+import { Compass, CircleAlert } from 'lucide-react';
 import { useQibla, PermissionState } from '@/hooks/use-qibla';
 import { useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
-import { cn, toArabicNumerals } from '@/lib/utils';
+import { toArabicNumerals } from '@/lib/utils';
 import { Button } from './ui/button';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import CompassSvg from './compass-svg';
+
+const KaabaIcon = () => (
+  <svg
+    width="32"
+    height="32"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M16.09,18.55L12,22.64l-4.09-4.09c-3.13-3.13-3.13-8.21,0-11.34c3.13-3.13,8.21-3.13,11.34,0C19.22,10.34,19.22,15.42,16.09,18.55z"
+      fill="#2c4c3b"
+    />
+    <path
+      d="M12,12.25c-1.24,0-2.25-1.01-2.25-2.25S10.76,7.75,12,7.75s2.25,1.01,2.25,2.25S13.24,12.25,12,12.25z"
+      fill="#F5F1E6"
+    />
+  </svg>
+);
+
 
 export default function QiblaCompass() {
   const { lang } = useLanguage();
@@ -68,42 +89,36 @@ export default function QiblaCompass() {
       );
     }
 
-    // Main Compass UI
     const rotation = 360 - compassHeading;
     const qiblaRelative = qiblaDirection - compassHeading;
 
     return (
-      <div className="flex flex-col items-center justify-center space-y-6">
-        <div
-          className="relative w-64 h-64 rounded-full bg-card border-8 border-primary/20 shadow-inner flex items-center justify-center"
-          style={{
-            transform: `rotate(${rotation}deg)`,
-            transition: 'transform 0.5s ease-out',
-          }}
-        >
-          {/* Compass Markings */}
-          {['N', 'E', 'S', 'W'].map((dir, i) => (
+      <div className="flex flex-col items-center justify-center space-y-8">
+        <div className="relative w-80 h-80 flex items-center justify-center">
+            {/* Kaaba Icon at the top, pointing to the Qibla */}
             <div
-              key={dir}
-              className="absolute w-full h-full flex justify-center"
-              style={{ transform: `rotate(${i * 90}deg)` }}
+              className="absolute z-10"
+              style={{
+                transform: `rotate(${qiblaRelative}deg) translateY(-145px)`,
+                transformOrigin: 'center',
+                transition: 'transform 0.5s ease-out',
+              }}
             >
-              <span
-                className="text-2xl font-bold text-foreground"
-                style={{ transform: `rotate(${-rotation}deg)` }}
-              >
-                {dir}
-              </span>
+              <div style={{transform: `rotate(${-qiblaRelative}deg)`}}>
+                <KaabaIcon />
+              </div>
             </div>
-          ))}
 
-          {/* Qibla Arrow */}
-          <div
-            className="absolute w-full h-full"
-            style={{ transform: `rotate(${qiblaRelative}deg)` }}
-          >
-            <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-b-[24px] border-b-primary"></div>
-          </div>
+            {/* The Compass SVG that rotates to keep North up */}
+            <div
+              className="absolute w-full h-full"
+              style={{
+                transform: `rotate(${rotation}deg)`,
+                transition: 'transform 0.5s ease-out',
+              }}
+            >
+              <CompassSvg rotation={rotation} />
+            </div>
         </div>
 
         <div className="text-center p-4 rounded-lg bg-card border shadow-sm">
