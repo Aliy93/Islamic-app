@@ -10,6 +10,7 @@ import { toArabicNumerals } from '@/lib/utils';
 import { useSettings } from '@/context/settings-context';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 // Kaaba SVG Icon
 const KaabaIcon = () => (
@@ -84,10 +85,12 @@ export default function QiblaCompass() {
     setManualDeclination,
     autoDetectDeclination,
     rawSensor,
+    startMagneticAutoDetect,
   } = useQibla();
 
   const { toast } = useToast();
   const [calibrationToastShown, setCalibrationToastShown] = useState(false);
+  const [detectDialogOpen, setDetectDialogOpen] = useState(false);
 
   const t = translations[lang];
 
@@ -251,6 +254,25 @@ export default function QiblaCompass() {
               }
             }} className="flex-1">{t.setDeclination || 'Set'}</Button>
           </div>
+          <div className="mt-2">
+            <Button variant="secondary" onClick={() => setDetectDialogOpen(true)} className="w-full">{t.detectStart || 'Detect Magnetic North'}</Button>
+          </div>
+          <Dialog open={detectDialogOpen} onOpenChange={setDetectDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t.detectHelpTitle}</DialogTitle>
+                <DialogDescription>{t.detectHelpBody}</DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setDetectDialogOpen(false)}>{t.cancel || 'Cancel'}</Button>
+                <Button onClick={() => {
+                  setDetectDialogOpen(false);
+                  // small delay to allow dialog close animation
+                  setTimeout(() => startMagneticAutoDetect({ samples: 30, frequency: 10 }), 250);
+                }}>{t.detectStart || 'Start Detection'}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <details className="mt-2 text-xs text-muted-foreground">
             <summary className="cursor-pointer">Sensor debug</summary>

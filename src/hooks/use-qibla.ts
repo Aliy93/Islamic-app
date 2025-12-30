@@ -149,6 +149,66 @@ export function useQibla() {
     }
   }, [location]);
 
+  // Attempt to detect magnetic north using device Magnetometer + Accelerometer (tilt compensated)
+  const startMagneticAutoDetect = useCallback(async (options?: { samples?: number; frequency?: number }) => {
+    const samplesTarget = options?.samples ?? 30;
+    const freq = options?.frequency ?? 10;
+    if (typeof window === 'undefined') return;
+
+    const win: any = window;
+    if (!('Magnetometer' in win) || !('Accelerometer' in win)) {
+      setError('Magnetometer/Accelerometer not supported in this browser.');
+      return;
+    }
+
+    try {
+      const accel = new win.Accelerometer({ frequency: freq });
+      const magnet = new win.Magnetometer({ frequency: freq });
+
+      const readings: number[] = [];
+
+      const onReading = () => {
+        const ax = accel.x ?? 0;
+        const ay = accel.y ?? 0;
+        const az = accel.z ?? 0;
+        const mx = magnet.x ?? 0;
+        const my = magnet.y ?? 0;
+        const mz = magnet.z ?? 0;
+
+        // Compute roll and pitch from accelerometer
+        const roll = Math.atan2(ay, az);
+        const pitch = Math.atan2(-ax, Math.sqrt(ay * ay + az * az));
+
+        // Tilt compensated magnetic sensor readings
+        const Xh = mx * Math.cos(pitch) + mz * Math.sin(pitch);
+        const Yh = mx * Math.sin(roll) * Math.sin(pitch) + my * Math.cos(roll) - mz * Math.sin(roll) * Math.cos(pitch);
+
+        let heading = (Math.atan2(Yh, Xh) * 180) / Math.PI;
+        heading = (heading + 360) % 360;
+
+        readings.push(heading);
+
+        if (readings.length >= samplesTarget) {
+          const avg = readings.reduce((s, v) => s + v, 0) / readings.length;
+          setCompassHeading(avg);
+          // stop sensors
+          magnet.removeEventListener('reading', onReading);
+          accel.removeEventListener('reading', onReading);
+          try { magnet.stop(); } catch {}
+          try { accel.stop(); } catch {}
+        }
+      };
+
+      magnet.addEventListener('reading', onReading);
+      accel.addEventListener('reading', onReading);
+
+      await accel.start();
+      await magnet.start();
+    } catch (e: any) {
+      setError(`Magnetic auto-detect failed: ${e?.message ?? e}`);
+    }
+  }, []);
+
   return {
     qiblaDirection,
     compassHeading,
@@ -161,5 +221,6 @@ export function useQibla() {
     setManualDeclination,
     autoDetectDeclination,
     rawSensor,
+    startMagneticAutoDetect,
   };
 }

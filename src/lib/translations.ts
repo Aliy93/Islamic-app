@@ -50,6 +50,12 @@ export const translations = {
     qiblaErrorTitle: "Compass Error",
     permissionPrompt: "Awaiting permission to access device sensors. Please approve the request from your browser.",
     permissionPromptTitle: "Permission Required"
+    ,
+    autoDetect: "Auto-detect",
+    setDeclination: "Set",
+    detectHelpTitle: "How to detect magnetic north",
+    detectHelpBody: "Hold the device flat, keep it away from metal and magnets, then slowly rotate it or move it in a figure-eight pattern while the detection runs.",
+    detectStart: "Start Detection"
 
   },
   ar: {
@@ -102,5 +108,11 @@ export const translations = {
     qiblaErrorTitle: "خطأ في البوصلة",
     permissionPrompt: "في انتظار الإذن للوصول إلى مستشعرات الجهاز. يرجى الموافقة على الطلب من متصفحك.",
     permissionPromptTitle: "الإذن مطلوب"
+    ,
+    autoDetect: "كشف تلقائي",
+    setDeclination: "تعيين",
+    detectHelpTitle: "كيفية كشف الشمال المغناطيسي",
+    detectHelpBody: "امسك الجهاز مستوياً، وابتعد عن المعادن والمواد المغناطيسية، ثم قم بتدويره ببطء أو حرّكه في نمط الرقم ثمانية أثناء تشغيل الكشف.",
+    detectStart: "بدء الكشف"
   }
 };
