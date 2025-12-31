@@ -4,7 +4,7 @@ import { translations } from '@/lib/translations';
 import { useState } from 'react';
 import HijriCalendar from '@/components/hijri-calendar';
 import CalendarHeader from '@/components/calendar-header';
-import { getHijriDate, getGregorianDateFromHijri } from '@/lib/hijri';
+import { getHijriDate } from '@/lib/hijri';
 
 export default function CalendarPage() {
   const { lang } = useLanguage();

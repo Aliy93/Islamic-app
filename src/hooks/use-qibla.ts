@@ -7,14 +7,34 @@ import { calculateQibla, circularStdDevDeg, getMagneticDeclination, smoothCompas
 type PermissionState = 'prompt' | 'granted' | 'denied';
 type CompassSupport = 'generic-sensors' | 'deviceorientation' | 'none';
 
+type PermissionResponse = 'granted' | 'denied';
+
+type SensorCtor<T> = new (options?: { frequency?: number }) => T;
+
+type VectorSensor = EventTarget & {
+  x: number | null;
+  y: number | null;
+  z: number | null;
+  start: () => void;
+  stop: () => void;
+  addEventListener: (type: 'reading', listener: () => void) => void;
+  removeEventListener: (type: 'reading', listener: () => void) => void;
+};
+
+type WindowWithSensors = {
+  Accelerometer?: SensorCtor<VectorSensor>;
+  Magnetometer?: SensorCtor<VectorSensor>;
+};
+
+type DeviceOrientationEventWithPermission = typeof DeviceOrientationEvent & {
+  requestPermission?: () => Promise<PermissionResponse>;
+};
+
 function getScreenOrientationAngle(): number {
-  try {
-    const s: any = screen as any;
-    if (s?.orientation && typeof s.orientation.angle === 'number') return s.orientation.angle;
-    const w: any = window as any;
-    if (typeof w.orientation === 'number') return w.orientation;
-  } catch {}
-  return 0;
+  if (typeof window === 'undefined') return 0;
+  if (screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle;
+  const legacy = (window as unknown as { orientation?: number }).orientation;
+  return typeof legacy === 'number' ? legacy : 0;
 }
 
 function normalizeDeg(deg: number): number {
@@ -67,9 +87,9 @@ export function useQibla() {
   // Detect which compass sources are available
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const win: any = window;
-    const hasGeneric = 'Magnetometer' in win && 'Accelerometer' in win;
-    const hasDO = typeof win.DeviceOrientationEvent !== 'undefined';
+    const win = window as unknown as WindowWithSensors;
+    const hasGeneric = typeof win.Magnetometer !== 'undefined' && typeof win.Accelerometer !== 'undefined';
+    const hasDO = typeof window.DeviceOrientationEvent !== 'undefined';
 
     // Prefer Generic Sensor API when present, but keep a fallback to DeviceOrientation.
     fallbackSupportRef.current = hasGeneric && hasDO ? 'deviceorientation' : 'none';
@@ -77,16 +97,18 @@ export function useQibla() {
 
     // On most browsers, there is no explicit permission prompt for orientation.
     // iOS Safari requires a user gesture via DeviceOrientationEvent.requestPermission().
-    const needsExplicitPermission = typeof (win.DeviceOrientationEvent as any)?.requestPermission === 'function';
+    const doe = DeviceOrientationEvent as unknown as DeviceOrientationEventWithPermission;
+    const needsExplicitPermission = typeof doe.requestPermission === 'function';
     setPermissionState((prev) => (prev === 'prompt' && !needsExplicitPermission ? 'granted' : prev));
   }, []);
 
   const requestPermission = useCallback(async () => {
     setError(null);
     try {
+      const doe = DeviceOrientationEvent as unknown as DeviceOrientationEventWithPermission;
       // iOS requires a user gesture to request DeviceOrientation permission.
-      if (typeof (DeviceOrientationEvent as any)?.requestPermission === 'function') {
-        const response = await (DeviceOrientationEvent as any).requestPermission();
+      if (typeof doe.requestPermission === 'function') {
+        const response = await doe.requestPermission();
         if (response === 'granted') {
           setPermissionState('granted');
         } else {
@@ -98,9 +120,10 @@ export function useQibla() {
 
       // Other browsers: permissions are handled by the browser automatically.
       setPermissionState('granted');
-    } catch (e: any) {
+    } catch (e: unknown) {
       setPermissionState('denied');
-      setError(`Permission error: ${e?.message ?? e}`);
+      const message = e instanceof Error ? e.message : String(e);
+      setError(`Permission error: ${message}`);
     }
   }, []);
 
@@ -120,7 +143,11 @@ export function useQibla() {
     const cleanupFns: Array<() => void> = [];
 
     const startGenericSensors = async () => {
-      const win: any = window;
+      const win = window as unknown as WindowWithSensors;
+      if (!win.Accelerometer || !win.Magnetometer) {
+        throw new Error('Generic sensors are not available on this device.');
+      }
+
       const accel = new win.Accelerometer({ frequency: 30 });
       const magnet = new win.Magnetometer({ frequency: 30 });
 
@@ -163,9 +190,9 @@ export function useQibla() {
       });
 
       try {
-        await accel.start();
-        await magnet.start();
-      } catch (e: any) {
+        accel.start();
+        magnet.start();
+      } catch (e: unknown) {
         throw e;
       }
     };
@@ -176,8 +203,9 @@ export function useQibla() {
         let heading: number | null = null;
 
         // iOS magnetic heading
-        if ('webkitCompassHeading' in event && (event as any).webkitCompassHeading != null) {
-          heading = (event as any).webkitCompassHeading;
+        const webkitCompassHeading = (event as unknown as { webkitCompassHeading?: number }).webkitCompassHeading;
+        if (typeof webkitCompassHeading === 'number') {
+          heading = webkitCompassHeading;
         } else if (event.alpha != null) {
           // Best-effort: alpha is not reliably magnetic-north-referenced across all browsers.
           // We treat it as a heading-like value when it's the only option.
@@ -190,10 +218,11 @@ export function useQibla() {
         }
       };
 
-      const win: any = window;
-      const eventName = 'ondeviceorientationabsolute' in win ? 'deviceorientationabsolute' : 'deviceorientation';
-      window.addEventListener(eventName, onDO as any);
-      cleanupFns.push(() => window.removeEventListener(eventName, onDO as any));
+      const eventName: 'deviceorientationabsolute' | 'deviceorientation' =
+        'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
+
+      window.addEventListener(eventName, onDO as unknown as EventListener);
+      cleanupFns.push(() => window.removeEventListener(eventName, onDO as unknown as EventListener));
     };
 
     (async () => {
@@ -201,7 +230,7 @@ export function useQibla() {
         if (support === 'generic-sensors') {
           try {
             await startGenericSensors();
-          } catch (e: any) {
+          } catch (e: unknown) {
             // If Generic Sensors are blocked/unavailable (common on desktop and some mobile browsers),
             // fall back to DeviceOrientation when possible.
             if (fallbackSupportRef.current === 'deviceorientation') {
@@ -213,9 +242,10 @@ export function useQibla() {
         } else {
           startDeviceOrientation();
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (cancelled) return;
-        setError(`Compass unavailable: ${e?.message ?? e}`);
+        const message = e instanceof Error ? e.message : String(e);
+        setError(`Compass unavailable: ${message}`);
         setPermissionState('denied');
       }
     })();

@@ -5,7 +5,6 @@ import { arSA, enUS } from 'date-fns/locale';
 import { CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getHijriDate } from '@/lib/hijri';
-import { translations } from '@/lib/translations';
 import { Language } from '@/context/language-context';
 import { toArabicNumerals } from '@/lib/utils';
 
@@ -18,7 +17,6 @@ export default function CalendarHeader({ onTodayClick, lang }: CalendarHeaderPro
   // Always use the current date
   const currentDate = new Date(); 
   const hijriDate = getHijriDate(currentDate);
-  const t = translations[lang];
 
   return (
     <div className="flex items-center justify-between">

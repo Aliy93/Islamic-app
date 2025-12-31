@@ -28,55 +28,61 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [prayerMethod, setPrayerMethodState] = useState<number>(DEFAULT_PRAYER_METHOD);
-  const [hijriAdjustment, setHijriAdjustmentState] = useState<number>(DEFAULT_HIJRI_ADJUSTMENT);
-  const [location, setLocationState] = useState<Location | null>(null);
-  const [isManualLocation, setIsManualLocationState] = useState<boolean>(false);
+  const [prayerMethod, setPrayerMethodState] = useState<number>(() => {
+    if (typeof window === 'undefined') return DEFAULT_PRAYER_METHOD;
+    const savedMethod = window.localStorage.getItem('prayerMethod');
+    return savedMethod ? Number(savedMethod) : DEFAULT_PRAYER_METHOD;
+  });
+
+  const [hijriAdjustment, setHijriAdjustmentState] = useState<number>(() => {
+    if (typeof window === 'undefined') return DEFAULT_HIJRI_ADJUSTMENT;
+    const savedAdjustment = window.localStorage.getItem('hijriAdjustment');
+    return savedAdjustment ? Number(savedAdjustment) : DEFAULT_HIJRI_ADJUSTMENT;
+  });
+
+  const [isManualLocation, setIsManualLocationState] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const savedIsManual = window.localStorage.getItem('isManualLocation');
+    return savedIsManual === 'true';
+  });
+
+  const [location, setLocationState] = useState<Location | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const savedLocation = window.localStorage.getItem('location');
+    return savedLocation ? (JSON.parse(savedLocation) as Location) : null;
+  });
+
   const [locationError, setLocationError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    const savedMethod = localStorage.getItem('prayerMethod');
-    if (savedMethod) setPrayerMethodState(Number(savedMethod));
+    // Sync persisted settings after hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPrayerMethodState(() => {
+      const savedMethod = window.localStorage.getItem('prayerMethod');
+      return savedMethod ? Number(savedMethod) : DEFAULT_PRAYER_METHOD;
+    });
 
-    const savedAdjustment = localStorage.getItem('hijriAdjustment');
-    if (savedAdjustment) setHijriAdjustmentState(Number(savedAdjustment));
-    
-    const savedIsManual = localStorage.getItem('isManualLocation');
-    const isManual = savedIsManual === 'true';
-    setIsManualLocationState(isManual);
-    
-    const savedLocation = localStorage.getItem('location');
+    setHijriAdjustmentState(() => {
+      const savedAdjustment = window.localStorage.getItem('hijriAdjustment');
+      return savedAdjustment ? Number(savedAdjustment) : DEFAULT_HIJRI_ADJUSTMENT;
+    });
+
+    setIsManualLocationState(() => {
+      const savedIsManual = window.localStorage.getItem('isManualLocation');
+      return savedIsManual === 'true';
+    });
+
+    const savedLocation = window.localStorage.getItem('location');
     if (savedLocation) {
-        setLocationState(JSON.parse(savedLocation));
-    } else if (!isManual) {
-        fetchAndSetLocation();
+      setLocationState(JSON.parse(savedLocation) as Location);
     }
   }, []);
-
-  const setPrayerMethod = (method: number) => {
-    localStorage.setItem('prayerMethod', String(method));
-    setPrayerMethodState(method);
-    localStorage.removeItem('prayerData');
-  };
-
-  const setHijriAdjustment = (adjustment: number) => {
-    localStorage.setItem('hijriAdjustment', String(adjustment));
-    setHijriAdjustmentState(adjustment);
-  };
 
   const setLocation = (newLocation: Location) => {
     localStorage.setItem('location', JSON.stringify(newLocation));
     setLocationState(newLocation);
     localStorage.removeItem('prayerData'); // Invalidate cache on location change
-  }
-
-  const setIsManualLocation = (isManual: boolean) => {
-    localStorage.setItem('isManualLocation', String(isManual));
-    setIsManualLocationState(isManual);
-    if (!isManual) {
-      fetchAndSetLocation(); // Fetch GPS location when switching to automatic
-    }
   }
 
   const fetchAndSetLocation = useCallback(() => {
@@ -90,7 +96,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           setLocation(newLocation);
           setLocationError(null);
         },
-        (err) => {
+        () => {
           setLocationError("Could not get location. Please enable location services.");
           toast({
             variant: "destructive",
@@ -102,12 +108,38 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } else {
       setLocationError("Geolocation is not supported by your browser.");
       toast({
-            variant: "destructive",
-            title: "Location Error",
-            description: "Geolocation is not supported by your browser. Please set your location manually.",
-          });
+        variant: "destructive",
+        title: "Location Error",
+        description: "Geolocation is not supported by your browser. Please set your location manually.",
+      });
     }
   }, [toast]);
+
+  useEffect(() => {
+    if (!location && !isManualLocation) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchAndSetLocation();
+    }
+  }, [fetchAndSetLocation, isManualLocation, location]);
+
+  const setPrayerMethod = (method: number) => {
+    localStorage.setItem('prayerMethod', String(method));
+    setPrayerMethodState(method);
+    localStorage.removeItem('prayerData');
+  };
+
+  const setHijriAdjustment = (adjustment: number) => {
+    localStorage.setItem('hijriAdjustment', String(adjustment));
+    setHijriAdjustmentState(adjustment);
+  };
+
+  const setIsManualLocation = (isManual: boolean) => {
+    localStorage.setItem('isManualLocation', String(isManual));
+    setIsManualLocationState(isManual);
+    if (!isManual) {
+      fetchAndSetLocation(); // Fetch GPS location when switching to automatic
+    }
+  }
 
 
   return (

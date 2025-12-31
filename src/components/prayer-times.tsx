@@ -96,8 +96,9 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
         } else {
           throw new Error(data.data || t.fetchError);
         }
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : t.fetchError;
+        setError(message);
       } finally {
         setLoading(false);
       }

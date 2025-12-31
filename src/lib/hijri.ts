@@ -78,7 +78,7 @@ export function getGregorianDateFromHijri(year: number, month: number, day: numb
   const yearDiff = (year - hijri.year) * 354;
   const monthDiff = (month - hijri.month) * 29.5;
   const dayDiff = day - hijri.day;
-  let totalDiff = Math.round(yearDiff + monthDiff + dayDiff);
+  const totalDiff = Math.round(yearDiff + monthDiff + dayDiff);
   
   gregorianDate = addDays(gregorianDate, totalDiff);
 

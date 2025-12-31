@@ -1,4 +1,5 @@
 import type {Config} from 'tailwindcss';
+import tailwindcssAnimate from 'tailwindcss-animate';
 
 export default {
   darkMode: ['class'],
@@ -10,9 +11,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Alegreya', 'Noto Kufi Arabic', 'sans-serif'],
-        body: ['Alegreya', 'Noto Kufi Arabic', 'serif'],
-        headline: ['Alegreya', 'Noto Kufi Arabic', 'serif'],
+        sans: ['var(--font-alegreya)', 'var(--font-noto-kufi-arabic)', 'Alegreya', 'Noto Kufi Arabic', 'sans-serif'],
+        body: ['var(--font-alegreya)', 'var(--font-noto-kufi-arabic)', 'Alegreya', 'Noto Kufi Arabic', 'serif'],
+        headline: ['var(--font-alegreya)', 'var(--font-noto-kufi-arabic)', 'Alegreya', 'Noto Kufi Arabic', 'serif'],
         code: ['monospace'],
       },
       colors: {
@@ -99,5 +100,5 @@ export default {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;

@@ -50,7 +50,7 @@ export function getMagneticDeclination(lat: number, lon: number): number {
   try {
     const model = geomagnetism.model(new Date());
     const point = model.point([lat, lon]);
-    const decl = (point as any)?.decl;
+    const decl = (point as unknown as { decl?: number })?.decl;
     return typeof decl === 'number' && Number.isFinite(decl) ? decl : 0;
   } catch {
     return 0;
@@ -93,8 +93,8 @@ export function smoothCompass(newAngle: number, buffer: number[], bufferSize: nu
     buffer.shift();
   }
 
-  let sum = buffer.reduce((acc, val) => acc + val, 0);
-  let average = sum / buffer.length;
+  const sum = buffer.reduce((acc, val) => acc + val, 0);
+  const average = sum / buffer.length;
 
   return (average + 360) % 360; // Normalize back to 0-360
 }

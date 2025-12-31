@@ -4,6 +4,21 @@ import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from '@/context/language-context';
 import { SettingsProvider } from '@/context/settings-context';
 import BottomNav from '@/components/bottom-nav';
+import { Alegreya, Noto_Kufi_Arabic } from 'next/font/google';
+
+const alegreya = Alegreya({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  display: 'swap',
+  variable: '--font-alegreya',
+});
+
+const notoKufiArabic = Noto_Kufi_Arabic({
+  subsets: ['arabic'],
+  weight: ['400', '500', '700'],
+  display: 'swap',
+  variable: '--font-noto-kufi-arabic',
+});
 
 export const metadata: Metadata = {
   title: 'Muslim App',
@@ -17,12 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500;700&family=Noto+Kufi+Arabic:wght@400;500;700&display=swap" rel="stylesheet" />
-      </head>
-      <body className="font-sans antialiased">
+      <body className={`${alegreya.variable} ${notoKufiArabic.variable} font-sans antialiased`}>
         <LanguageProvider>
           <SettingsProvider>
             <div className="max-w-md mx-auto bg-background shadow-lg min-h-screen flex flex-col">

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   format,
   isToday,
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { getHijriDate, HijriDateInfo, getGregorianDateFromHijri } from '@/lib/hijri';
 import { getEventForDate, IslamicEvent } from '@/lib/islamic-events';
 import { cn, toArabicNumerals } from '@/lib/utils';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { Separator } from './ui/separator';
 import { useSettings } from '@/context/settings-context';
 
@@ -29,12 +29,11 @@ type CalendarDay = {
 interface HijriCalendarProps {
     lang: 'en' | 'ar';
     currentHijriDate: { year: number; month: number; };
-    setCurrentHijriDate: (date: { year: number; month: number; }) => void;
+  setCurrentHijriDate: React.Dispatch<React.SetStateAction<{ year: number; month: number }>>;
 }
 
 export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurrentHijriDate }: HijriCalendarProps) {
   const { hijriAdjustment } = useSettings();
-  const [monthlyEvents, setMonthlyEvents] = useState<CalendarDay[]>([]);
 
   const calendarGrid = useMemo((): CalendarDay[][] => {
     const { year, month } = currentHijriDate;
@@ -52,7 +51,6 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
 
     // 3. Generate all days of the current Hijri month
     const monthDays: CalendarDay[] = Array.from({ length: daysInMonth }, (_, i) => {
-      const dayNumber = i + 1;
       const gregorianDate = add(firstDayOfHijriMonthGregorian, { days: i });
       const hijriInfo = getHijriDate(gregorianDate, hijriAdjustment);
       return {
@@ -66,7 +64,6 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
     if (monthDays.length === 0) return [];
 
     // 4. Get padding days from previous and next months
-    const weekStartsOn = 6; // Saturday
     const startDayOfWeek = (monthDays[0].gregorian.getDay() + 1) % 7; // Convert Sunday-first to Saturday-first
     const endDayOfWeek = (monthDays[daysInMonth - 1].gregorian.getDay() + 1) % 7;
 
@@ -118,13 +115,10 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
     return weeks;
   }, [currentHijriDate, hijriAdjustment]);
 
-  useEffect(() => {
-    // Find all events in the current month view
-    const events = calendarGrid
-      .flat()
-      .filter(day => day.isCurrentMonth && day.event)
-      .sort((a,b) => a.hijri.day - b.hijri.day); // Sort by day
-    setMonthlyEvents(events);
+  const monthlyEvents = useMemo(() => {
+    const events = calendarGrid.flat().filter((day) => day.isCurrentMonth && day.event);
+    events.sort((a, b) => a.hijri.day - b.hijri.day);
+    return events;
   }, [calendarGrid]);
 
   const handlePrevMonth = () => {

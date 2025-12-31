@@ -84,8 +84,9 @@ export default function Home() {
             .map(([name, time]) => ({ name: name as keyof PrayerTimesData, time }));
 
         findNextPrayer(prayerSchedule);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : t.fetchError;
+        setError(message);
       }
     };
   
