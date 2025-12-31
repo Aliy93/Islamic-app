@@ -1,245 +1,132 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSettings } from '@/context/settings-context';
-import { calculateQibla, getMagneticDeclination, smoothCompass } from '@/lib/qibla';
+import { calculateQibla, circularStdDevDeg, getMagneticDeclination, smoothCompass } from '@/lib/qibla';
 
 type PermissionState = 'prompt' | 'granted' | 'denied';
+type CompassSupport = 'generic-sensors' | 'deviceorientation' | 'none';
+
+function getScreenOrientationAngle(): number {
+  try {
+    const s: any = screen as any;
+    if (s?.orientation && typeof s.orientation.angle === 'number') return s.orientation.angle;
+    const w: any = window as any;
+    if (typeof w.orientation === 'number') return w.orientation;
+  } catch {}
+  return 0;
+}
+
+function normalizeDeg(deg: number): number {
+  return (deg % 360 + 360) % 360;
+}
 
 export function useQibla() {
   const { location, locationError } = useSettings();
-  const [qiblaDirection, setQiblaDirection] = useState<number>(0);
-  const [compassHeading, setCompassHeading] = useState<number>(0);
-  const [declination, setDeclination] = useState<number>(0);
   const [permissionState, setPermissionState] = useState<PermissionState>('prompt');
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [support, setSupport] = useState<CompassSupport>('none');
+  const [deviceHeadingMagneticNorth, setDeviceHeadingMagneticNorth] = useState<number>(0);
+  const [isCompassActive, setIsCompassActive] = useState(false);
+  const [needsCalibration, setNeedsCalibration] = useState(false);
 
-  const headingBuffer = useState<number[]>(() => [])[0];
-  const [rawSensor, setRawSensor] = useState<{ alpha?: number | null; absolute?: boolean | null; webkit?: number | null }>({});
-  const [isDetecting, setIsDetecting] = useState(false);
+  const fallbackSupportRef = useRef<CompassSupport>('none');
 
-  const handleDeviceOrientation = useCallback((event: DeviceOrientationEvent) => {
-    let heading: number | null = null;
-    
-    // For iOS devices
-    if ('webkitCompassHeading' in event && event.webkitCompassHeading !== null) {
-      heading = event.webkitCompassHeading;
-    } 
-    // For other devices
-    else if (event.alpha !== null) {
-        // Adjust for screen orientation when available
-        const rawAlpha = event.alpha as number;
-        const orientationAngle = (typeof window !== 'undefined' && (screen as any)?.orientation && typeof (screen as any).orientation.angle === 'number')
-          ? (screen as any).orientation.angle
-          : (typeof (window as any).orientation === 'number' ? (window as any).orientation : 0);
+  const headingBufferRef = useRef<number[]>([]);
+  const stabilityBufferRef = useRef<number[]>([]);
 
-        // Many browsers report alpha as rotation clockwise from device reference.
-        // Common normalization: heading = 360 - alpha, then adjust by screen orientation.
-        let normalized = 360 - rawAlpha;
-        normalized = (normalized + orientationAngle) % 360;
-        heading = normalized;
-    }
+  const qiblaBearingTrueNorth = useMemo(() => {
+    if (!location) return 0;
+    return calculateQibla(location.latitude, location.longitude);
+  }, [location]);
 
-    if (heading !== null) {
-      // NOTE: We do NOT correct for magnetic declination here.
-      // The requirement is to point relative to MAGNETIC NORTH.
-      const smoothedHeading = smoothCompass(heading, headingBuffer, 10);
-      setCompassHeading(smoothedHeading);
-      setRawSensor({ alpha: event.alpha, absolute: event.absolute ?? null, webkit: (event as any).webkitCompassHeading ?? null });
-    }
-  }, [headingBuffer]);
+  const magneticDeclination = useMemo(() => {
+    if (!location) return 0;
+    return getMagneticDeclination(location.latitude, location.longitude);
+  }, [location]);
+
+  // Per spec:
+  // ArrowRotation = (QiblaBearingTrueNorth - DeviceHeadingMagneticNorth - MagneticDeclination + 360) % 360
+  const arrowRotation = useMemo(() => {
+    return normalizeDeg(qiblaBearingTrueNorth - deviceHeadingMagneticNorth - magneticDeclination);
+  }, [qiblaBearingTrueNorth, deviceHeadingMagneticNorth, magneticDeclination]);
+
+  const setHeading = useCallback((headingMagneticDeg: number) => {
+    const smoothed = smoothCompass(headingMagneticDeg, headingBufferRef.current, 12);
+    setDeviceHeadingMagneticNorth(smoothed);
+    setIsCompassActive(true);
+
+    const buf = stabilityBufferRef.current;
+    buf.push(smoothed);
+    if (buf.length > 25) buf.shift();
+    const std = circularStdDevDeg(buf);
+    // Heuristic: show calibration when readings are unstable/noisy
+    setNeedsCalibration(buf.length < 8 || std > 18);
+  }, []);
+
+  // Detect which compass sources are available
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const win: any = window;
+    const hasGeneric = 'Magnetometer' in win && 'Accelerometer' in win;
+    const hasDO = typeof win.DeviceOrientationEvent !== 'undefined';
+
+    // Prefer Generic Sensor API when present, but keep a fallback to DeviceOrientation.
+    fallbackSupportRef.current = hasGeneric && hasDO ? 'deviceorientation' : 'none';
+    setSupport(hasGeneric ? 'generic-sensors' : hasDO ? 'deviceorientation' : 'none');
+
+    // On most browsers, there is no explicit permission prompt for orientation.
+    // iOS Safari requires a user gesture via DeviceOrientationEvent.requestPermission().
+    const needsExplicitPermission = typeof (win.DeviceOrientationEvent as any)?.requestPermission === 'function';
+    setPermissionState((prev) => (prev === 'prompt' && !needsExplicitPermission ? 'granted' : prev));
+  }, []);
 
   const requestPermission = useCallback(async () => {
-    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-      try {
+    setError(null);
+    try {
+      // iOS requires a user gesture to request DeviceOrientation permission.
+      if (typeof (DeviceOrientationEvent as any)?.requestPermission === 'function') {
         const response = await (DeviceOrientationEvent as any).requestPermission();
         if (response === 'granted') {
           setPermissionState('granted');
-          window.addEventListener('deviceorientation', handleDeviceOrientation);
         } else {
           setPermissionState('denied');
-          setError("Permission to access device orientation was denied.");
+          setError('Permission to access device orientation was denied.');
         }
-      } catch (e: any) {
-        setError(`Error requesting permission: ${e.message}`);
-        setPermissionState('denied');
-      }
-    } else {
-      // For non-iOS 13+ browsers
-      setPermissionState('granted');
-      window.addEventListener('deviceorientation', handleDeviceOrientation);
-    }
-  }, [handleDeviceOrientation]);
-
-  useEffect(() => {
-    if(location) {
-        const direction = calculateQibla(location.latitude, location.longitude);
-
-        // Attempt to fetch a more accurate magnetic declination (best-effort).
-        (async () => {
-          try {
-            const url = `https://www.ngdc.noaa.gov/geomag-web/calculators/calculateDeclination?lat1=${location.latitude}&lon1=${location.longitude}&resultFormat=json`;
-            const res = await fetch(url);
-            if (res.ok) {
-              const data = await res.json();
-              let dec: number | null = null;
-              if (Array.isArray(data.result) && data.result.length > 0 && typeof data.result[0].declination === 'number') {
-                dec = data.result[0].declination;
-              } else if (data.declination && typeof data.declination === 'number') {
-                dec = data.declination;
-              }
-              if (dec === null) {
-                dec = getMagneticDeclination(location.latitude, location.longitude);
-              }
-              setDeclination(dec);
-              setQiblaDirection((direction - dec + 360) % 360);
-            } else {
-              const dec = getMagneticDeclination(location.latitude, location.longitude);
-              setDeclination(dec);
-              setQiblaDirection((direction - dec + 360) % 360);
-            }
-          } catch (e) {
-            const dec = getMagneticDeclination(location.latitude, location.longitude);
-            setDeclination(dec);
-            setQiblaDirection((direction - dec + 360) % 360);
-          } finally {
-            setIsLoading(false);
-          }
-        })();
-    } else {
-        setIsLoading(true);
-    }
-
-    return () => {
-      window.removeEventListener('deviceorientation', handleDeviceOrientation);
-    };
-  }, [location, handleDeviceOrientation]);
-  
-  // Calculate final rotation for the UI needle
-  const qiblaRotation = (qiblaDirection - compassHeading + 360) % 360;
-
-  // Manual/auto declination controls
-  const setManualDeclination = useCallback((d: number) => {
-    setDeclination(d);
-    if (location) {
-      setQiblaDirection((calculateQibla(location.latitude, location.longitude) - d + 360) % 360);
-    }
-  }, [location]);
-
-  const autoDetectDeclination = useCallback(async () => {
-    if (!location) {
-      setError('Location not available for auto-detect');
-      return;
-    }
-    try {
-      const url = `https://www.ngdc.noaa.gov/geomag-web/calculators/calculateDeclination?lat1=${location.latitude}&lon1=${location.longitude}&resultFormat=json`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        let dec: number | null = null;
-        if (Array.isArray(data.result) && data.result.length > 0 && typeof data.result[0].declination === 'number') {
-          dec = data.result[0].declination;
-        } else if (data.declination && typeof data.declination === 'number') {
-          dec = data.declination;
-        }
-        if (dec === null) dec = getMagneticDeclination(location.latitude, location.longitude);
-        setDeclination(dec);
-        setQiblaDirection((calculateQibla(location.latitude, location.longitude) - dec + 360) % 360);
         return;
       }
-      // fallback to local approximation if network/API fails
-      const dec = getMagneticDeclination(location.latitude, location.longitude);
-      setDeclination(dec);
-      setQiblaDirection((calculateQibla(location.latitude, location.longitude) - dec + 360) % 360);
+
+      // Other browsers: permissions are handled by the browser automatically.
+      setPermissionState('granted');
     } catch (e: any) {
-      // Do not treat declination fetch failure as fatal — use local fallback
-      const dec = getMagneticDeclination(location.latitude, location.longitude);
-      setDeclination(dec);
-      setQiblaDirection((calculateQibla(location.latitude, location.longitude) - dec + 360) % 360);
+      setPermissionState('denied');
+      setError(`Permission error: ${e?.message ?? e}`);
     }
-  }, [location]);
-  // Attempt to detect magnetic north using device Magnetometer + Accelerometer (tilt compensated)
-  const startMagneticAutoDetect = useCallback(async (options?: { samples?: number; frequency?: number }) => {
-    const samplesTarget = options?.samples ?? 30;
-    const freq = options?.frequency ?? 10;
+  }, []);
+
+  // Start live compass when permission granted
+  useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (permissionState !== 'granted') return;
+    if (support === 'none') return;
 
-    setIsDetecting(true);
+    let cancelled = false;
+    setIsCompassActive(false);
 
-    const win: any = window;
-    if (!('Magnetometer' in win) || !('Accelerometer' in win)) {
-      // If Generic Sensor API is not available, fall back to DeviceOrientation sampling
-      // as a best-effort estimate so the feature doesn't fail silently.
-      try {
-        const readings: number[] = [];
-        let count = 0;
-        const onDO = (ev: DeviceOrientationEvent) => {
-          let heading: number | null = null;
-          if ('webkitCompassHeading' in ev && (ev as any).webkitCompassHeading != null) {
-            heading = (ev as any).webkitCompassHeading;
-          } else if (ev.alpha != null) {
-            const rawAlpha = ev.alpha as number;
-            const orientationAngle = (typeof window !== 'undefined' && (screen as any)?.orientation && typeof (screen as any).orientation.angle === 'number')
-              ? (screen as any).orientation.angle
-              : (typeof (window as any).orientation === 'number' ? (window as any).orientation : 0);
-            let normalized = 360 - rawAlpha;
-            normalized = (normalized + orientationAngle) % 360;
-            heading = normalized;
-          }
-          if (heading != null) {
-            readings.push(heading);
-            count++;
-          }
-          if (count >= (options?.samples ?? 30)) {
-            window.removeEventListener('deviceorientation', onDO);
-            const avg = readings.reduce((s, v) => s + v, 0) / readings.length;
-            setCompassHeading(avg);
-            setIsDetecting(false);
-          }
-        };
-        window.addEventListener('deviceorientation', onDO as any);
-        // safety timeout
-        setTimeout(() => {
-          try { window.removeEventListener('deviceorientation', onDO as any); } catch {}
-          if (readings.length > 0) {
-            const avg = readings.reduce((s, v) => s + v, 0) / readings.length;
-            setCompassHeading(avg);
-          } else {
-            setError('DeviceOrientation unavailable for fallback detection.');
-          }
-          setIsDetecting(false);
-        }, ((options?.samples ?? 30) * (1000 / (options?.frequency ?? 10))) + 2000);
-      } catch (e: any) {
-        setError('Magnetometer/Accelerometer not supported in this browser.');
-        setIsDetecting(false);
-      }
-      return;
-    }
+    // Reset stability buffers on start
+    headingBufferRef.current = [];
+    stabilityBufferRef.current = [];
 
-    // Track detecting state
-    let accel: any = null;
-    let magnet: any = null;
-    try {
-      // Check permissions when available
-      try {
-        const perms = (navigator as any).permissions;
-        if (perms && typeof perms.query === 'function') {
-          try {
-            const pm = await perms.query({ name: 'magnetometer' } as any);
-            if (pm.state === 'denied') {
-              setError('Magnetometer permission denied. Please enable sensor permissions.');
-              return;
-            }
-          } catch {}
-        }
-      } catch {}
+    const cleanupFns: Array<() => void> = [];
 
-      accel = new win.Accelerometer({ frequency: freq });
-      magnet = new win.Magnetometer({ frequency: freq });
-
-      const readings: number[] = [];
+    const startGenericSensors = async () => {
+      const win: any = window;
+      const accel = new win.Accelerometer({ frequency: 30 });
+      const magnet = new win.Magnetometer({ frequency: 30 });
 
       const onReading = () => {
+        if (cancelled) return;
+
         const ax = accel.x ?? 0;
         const ay = accel.y ?? 0;
         const az = accel.z ?? 0;
@@ -247,57 +134,113 @@ export function useQibla() {
         const my = magnet.y ?? 0;
         const mz = magnet.z ?? 0;
 
-        // Compute roll and pitch from accelerometer
+        // roll/pitch from gravity
         const roll = Math.atan2(ay, az);
         const pitch = Math.atan2(-ax, Math.sqrt(ay * ay + az * az));
 
-        // Tilt compensated magnetic sensor readings
+        // tilt-compensated magnetometer
         const Xh = mx * Math.cos(pitch) + mz * Math.sin(pitch);
         const Yh = mx * Math.sin(roll) * Math.sin(pitch) + my * Math.cos(roll) - mz * Math.sin(roll) * Math.cos(pitch);
 
+        // Heading relative to magnetic north
         let heading = (Math.atan2(Yh, Xh) * 180) / Math.PI;
-        heading = (heading + 360) % 360;
+        heading = normalizeDeg(heading);
 
-        readings.push(heading);
+        // Adjust to screen orientation
+        heading = normalizeDeg(heading + getScreenOrientationAngle());
 
-        if (readings.length >= samplesTarget) {
-          const avg = readings.reduce((s, v) => s + v, 0) / readings.length;
-          setCompassHeading(avg);
-          try { magnet.removeEventListener('reading', onReading); } catch {}
-          try { accel.removeEventListener('reading', onReading); } catch {}
-          try { magnet.stop(); } catch {}
-          try { accel.stop(); } catch {}
-          setIsDetecting(false);
-        }
+        setHeading(heading);
       };
 
       magnet.addEventListener('reading', onReading);
       accel.addEventListener('reading', onReading);
 
-      await accel.start();
-      await magnet.start();
-    } catch (e: any) {
-      setError(`Magnetic auto-detect failed: ${e?.message ?? e}`);
-      try { if (magnet && typeof magnet.stop === 'function') magnet.stop(); } catch {}
-      try { if (accel && typeof accel.stop === 'function') accel.stop(); } catch {}
-      setIsDetecting(false);
-    }
-  }, []);
+      cleanupFns.push(() => {
+        try { magnet.removeEventListener('reading', onReading); } catch {}
+        try { accel.removeEventListener('reading', onReading); } catch {}
+        try { magnet.stop(); } catch {}
+        try { accel.stop(); } catch {}
+      });
 
+      try {
+        await accel.start();
+        await magnet.start();
+      } catch (e: any) {
+        throw e;
+      }
+    };
+
+    const startDeviceOrientation = () => {
+      const onDO = (event: DeviceOrientationEvent) => {
+        if (cancelled) return;
+        let heading: number | null = null;
+
+        // iOS magnetic heading
+        if ('webkitCompassHeading' in event && (event as any).webkitCompassHeading != null) {
+          heading = (event as any).webkitCompassHeading;
+        } else if (event.alpha != null) {
+          // Best-effort: alpha is not reliably magnetic-north-referenced across all browsers.
+          // We treat it as a heading-like value when it's the only option.
+          heading = normalizeDeg(360 - (event.alpha as number));
+        }
+
+        if (heading != null) {
+          heading = normalizeDeg(heading + getScreenOrientationAngle());
+          setHeading(heading);
+        }
+      };
+
+      const win: any = window;
+      const eventName = 'ondeviceorientationabsolute' in win ? 'deviceorientationabsolute' : 'deviceorientation';
+      window.addEventListener(eventName, onDO as any);
+      cleanupFns.push(() => window.removeEventListener(eventName, onDO as any));
+    };
+
+    (async () => {
+      try {
+        if (support === 'generic-sensors') {
+          try {
+            await startGenericSensors();
+          } catch (e: any) {
+            // If Generic Sensors are blocked/unavailable (common on desktop and some mobile browsers),
+            // fall back to DeviceOrientation when possible.
+            if (fallbackSupportRef.current === 'deviceorientation') {
+              setSupport('deviceorientation');
+              return;
+            }
+            throw e;
+          }
+        } else {
+          startDeviceOrientation();
+        }
+      } catch (e: any) {
+        if (cancelled) return;
+        setError(`Compass unavailable: ${e?.message ?? e}`);
+        setPermissionState('denied');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      cleanupFns.forEach((fn) => {
+        try { fn(); } catch {}
+      });
+    };
+  }, [permissionState, support, setHeading]);
 
   return {
-    qiblaDirection,
-    compassHeading,
+    qiblaBearingTrueNorth,
+    magneticDeclination,
+    deviceHeadingMagneticNorth,
+    arrowRotation,
+    needsCalibration,
+    isCompassActive,
+    isSupported: support !== 'none',
+    support,
     permissionState,
     requestPermission,
     error,
-    isLoading: isLoading || (!location && !locationError),
-    qiblaRotation,
-    declination,
-    setManualDeclination,
-    autoDetectDeclination,
-    rawSensor,
-    startMagneticAutoDetect,
-    isDetecting,
+    isLoading: !location && !locationError,
+    locationError,
   };
 }

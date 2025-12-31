@@ -5,12 +5,10 @@ import { useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Compass, Zap, Ban, Navigation } from 'lucide-react';
+import { Compass, Zap, Ban } from 'lucide-react';
 import { toArabicNumerals } from '@/lib/utils';
 import { useSettings } from '@/context/settings-context';
-import { useEffect, useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useEffect } from 'react';
 
 // Kaaba SVG Icon
 const KaabaIcon = () => (
@@ -53,7 +51,7 @@ const NorthNeedle = ({ rotation }: { rotation: number }) => (
         style={{
           borderLeft: '8px solid transparent',
           borderRight: '8px solid transparent',
-          borderBottom: '96px solid #D32F2F', // Red color for North
+          borderBottom: '96px solid hsl(var(--destructive))',
         }}
       ></div>
        {/* White part (South) */}
@@ -62,7 +60,7 @@ const NorthNeedle = ({ rotation }: { rotation: number }) => (
         style={{
           borderLeft: '8px solid transparent',
           borderRight: '8px solid transparent',
-          borderTop: '96px solid #F5F5F5', // Light gray/white for South
+          borderTop: '96px solid hsl(var(--muted))',
         }}
       ></div>
     </div>
@@ -74,24 +72,19 @@ export default function QiblaCompass() {
   const { lang } = useLanguage();
   const { location, locationError, fetchAndSetLocation } = useSettings();
   const {
-    qiblaDirection,
     permissionState,
     requestPermission,
-    error: qiblaError,
     isLoading,
-    qiblaRotation,
-    compassHeading,
-    declination,
-    setManualDeclination,
-    autoDetectDeclination,
-    rawSensor,
-    startMagneticAutoDetect,
-    isDetecting,
+    qiblaBearingTrueNorth,
+    magneticDeclination,
+    deviceHeadingMagneticNorth,
+    arrowRotation,
+    needsCalibration,
+    isCompassActive,
+    isSupported,
+    support,
+    error,
   } = useQibla();
-
-  const { toast } = useToast();
-  const [calibrationToastShown, setCalibrationToastShown] = useState(false);
-  const [detectDialogOpen, setDetectDialogOpen] = useState(false);
 
   const t = translations[lang];
 
@@ -100,33 +93,6 @@ export default function QiblaCompass() {
       fetchAndSetLocation();
     }
   }, [location, locationError, fetchAndSetLocation]);
-
-  // Show a one-time toast when device provides usable orientation (calibrated)
-  useEffect(() => {
-    if (
-      permissionState === 'granted' &&
-      rawSensor.alpha != null &&
-      (rawSensor.absolute === true || rawSensor.webkit != null) &&
-      !calibrationToastShown
-    ) {
-      toast({
-        title: 'Compass calibrated',
-        description: 'Calibration successful. Compass accuracy should improve.',
-      });
-      setCalibrationToastShown(true);
-    }
-  }, [permissionState, rawSensor, calibrationToastShown, toast]);
-
-  // Show error toasts for qibla errors
-  useEffect(() => {
-    if (qiblaError) {
-      toast({
-        variant: 'destructive',
-        title: 'Compass error',
-        description: qiblaError,
-      });
-    }
-  }, [qiblaError, toast]);
 
   const renderContent = () => {
     if (isLoading) {
@@ -152,12 +118,12 @@ export default function QiblaCompass() {
       );
     }
 
-    if (qiblaError || permissionState === 'denied') {
+    if (permissionState === 'denied') {
       return (
         <Alert variant="destructive">
           <Ban className="w-4 h-4" />
           <AlertTitle>{t.qiblaErrorTitle}</AlertTitle>
-          <AlertDescription>{t.permissionNeeded}</AlertDescription>
+          <AlertDescription>{error || t.permissionNeeded}</AlertDescription>
         </Alert>
       );
     }
@@ -175,9 +141,21 @@ export default function QiblaCompass() {
       );
     }
 
+    if (!isSupported) {
+      return (
+        <Alert>
+          <AlertTitle>{t.qiblaErrorTitle}</AlertTitle>
+          <AlertDescription>
+            Live compass is not supported on this device. Qibla bearing is{' '}
+            {lang === 'ar' ? toArabicNumerals(qiblaBearingTrueNorth.toFixed(0)) : qiblaBearingTrueNorth.toFixed(0)}° (true north).
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
     return (
       <div className="flex flex-col items-center justify-center gap-6">
-        {permissionState === 'granted' && (rawSensor.alpha == null || rawSensor.absolute === false) && (
+        {permissionState === 'granted' && isCompassActive && needsCalibration && (
           <Alert>
             <Zap className="w-4 h-4" />
             <AlertTitle>{t.calibratingTitle}</AlertTitle>
@@ -224,13 +202,13 @@ export default function QiblaCompass() {
             </span>
           </div>
 
-          {/* North-pointing Needle */}
-          <NorthNeedle rotation={-compassHeading} />
+          {/* North-pointing Needle (magnetic north) */}
+          <NorthNeedle rotation={-deviceHeadingMagneticNorth} />
           
           {/* Qibla Direction Indicator */}
           <div
             className="absolute inset-0 flex items-center justify-center transition-transform duration-200 ease-in-out"
-            style={{ transform: `rotate(${qiblaDirection}deg)` }}
+            style={{ transform: `rotate(${arrowRotation}deg)` }}
           >
             <div className="relative w-4 h-64">
               <KaabaIcon />
@@ -248,53 +226,11 @@ export default function QiblaCompass() {
             {t.qiblaDirection}
           </h2>
           <p className="text-5xl font-bold">
-            {lang === 'ar' ? toArabicNumerals(qiblaDirection.toFixed(0)) : qiblaDirection.toFixed(0)}°
+            {lang === 'ar' ? toArabicNumerals(qiblaBearingTrueNorth.toFixed(0)) : qiblaBearingTrueNorth.toFixed(0)}°
           </p>
-        </div>
-        <div className="w-80 text-sm text-primary space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="font-medium">Declination</span>
-            <span>{declination?.toFixed(2) ?? '0.00'}°</span>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => autoDetectDeclination()} className="flex-1">{t.autoDetect || 'Auto-detect'}</Button>
-            <Button onClick={() => {
-              const input = prompt('Enter magnetic declination in degrees (positive east):', String(declination ?? 0));
-              if (input !== null) {
-                const v = parseFloat(input);
-                if (!isNaN(v)) setManualDeclination(v);
-              }
-            }} className="flex-1">{t.setDeclination || 'Set'}</Button>
-          </div>
-            <div className="mt-2">
-            <Button variant="secondary" onClick={() => setDetectDialogOpen(true)} className="w-full" disabled={isDetecting}>{isDetecting ? (t.detecting || 'Detecting...') : (t.detectStart || 'Detect Magnetic North')}</Button>
-          </div>
-          <Dialog open={detectDialogOpen} onOpenChange={setDetectDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{t.detectHelpTitle}</DialogTitle>
-                <DialogDescription>{t.detectHelpBody}</DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setDetectDialogOpen(false)}>{t.cancel || 'Cancel'}</Button>
-                <Button onClick={() => {
-                  setDetectDialogOpen(false);
-                  // small delay to allow dialog close animation
-                  setTimeout(() => startMagneticAutoDetect({ samples: 30, frequency: 10 }), 250);
-                }}>{t.detectStart || 'Start Detection'}</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <details className="mt-2 text-xs text-muted-foreground">
-            <summary className="cursor-pointer">Sensor debug</summary>
-            <div className="mt-2">
-              <div>Compass: {compassHeading.toFixed(1)}°</div>
-              <div>alpha: {rawSensor.alpha ?? 'n/a'}</div>
-              <div>absolute: {String(rawSensor.absolute)}</div>
-              <div>webkitCompassHeading: {rawSensor.webkit ?? 'n/a'}</div>
-            </div>
-          </details>
+          <p className="text-sm text-muted-foreground font-body">
+            Declination: {magneticDeclination.toFixed(1)}° · Source: {support === 'generic-sensors' ? 'Sensors' : 'DeviceOrientation'}
+          </p>
         </div>
       </div>
     );

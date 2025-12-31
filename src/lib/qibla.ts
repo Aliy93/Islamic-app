@@ -1,6 +1,8 @@
-// Kaaba location
-const KAABA_LAT = 21.422487;
-const KAABA_LON = 39.826206;
+import geomagnetism from 'geomagnetism';
+
+// Kaaba location (exact per spec)
+const KAABA_LAT = 21.4225;
+const KAABA_LON = 39.8262;
 
 // Function to convert degrees to radians
 function toRadians(degrees: number): number {
@@ -43,11 +45,27 @@ export function calculateQibla(lat: number, lon: number): number {
  * A real implementation would have a more complex calculation or a lookup table.
  */
 export function getMagneticDeclination(lat: number, lon: number): number {
-  // This is a highly simplified placeholder. A real implementation would use a model
-  // like the World Magnetic Model (WMM) or a lookup table for better accuracy.
-  // For this example, we will return 0, which means we are assuming magnetic north
-  // is the same as true north. This can lead to inaccuracies.
-  return 0;
+  // Offline WMM-based declination (east-positive), best-effort.
+  // If the model fails for any reason, fall back to 0.
+  try {
+    const model = geomagnetism.model(new Date());
+    const point = model.point([lat, lon]);
+    const decl = (point as any)?.decl;
+    return typeof decl === 'number' && Number.isFinite(decl) ? decl : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function circularStdDevDeg(anglesDeg: number[]): number {
+  if (anglesDeg.length === 0) return 0;
+  const anglesRad = anglesDeg.map((a) => (a * Math.PI) / 180);
+  const sinSum = anglesRad.reduce((s, a) => s + Math.sin(a), 0);
+  const cosSum = anglesRad.reduce((s, a) => s + Math.cos(a), 0);
+  const R = Math.sqrt(sinSum * sinSum + cosSum * cosSum) / anglesRad.length;
+  // Circular standard deviation (radians): sqrt(-2 ln R)
+  const stdRad = Math.sqrt(Math.max(0, -2 * Math.log(Math.max(R, 1e-12))));
+  return (stdRad * 180) / Math.PI;
 }
 
 /**
