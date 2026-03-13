@@ -214,7 +214,7 @@ export default function Home() {
             </Alert>
         )}
 
-        <PrayerTimes currentDate={currentDate} nextPrayerName={nextPrayer?.name} />
+        <PrayerTimes currentDate={currentDate.getTime()} nextPrayerName={nextPrayer?.name} />
     </div>
   );
 }

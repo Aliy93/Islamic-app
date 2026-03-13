@@ -40,8 +40,8 @@ const prayerIcons: Record<keyof PrayerTimesData, React.ReactNode> = {
 };
 
 interface PrayerTimesProps {
-    currentDate?: Date;
-    nextPrayerName?: string;
+  currentDate?: number;
+  nextPrayerName?: string;
 }
 
 export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }: PrayerTimesProps) {
@@ -52,10 +52,10 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentDate, setCurrentDate] = useState(initialDate || new Date());
+  const [currentDate, setCurrentDate] = useState(initialDate ? new Date(initialDate) : new Date());
 
   useEffect(() => {
-    setCurrentDate(initialDate || new Date());
+    setCurrentDate(initialDate ? new Date(initialDate) : new Date());
   }, [initialDate]);
 
   useEffect(() => {
