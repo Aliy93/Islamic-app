@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -195,9 +196,9 @@ export default function Home() {
           <h2 className="text-3xl font-bold mb-1 font-headline">
             {mounted && nextPrayer ? (lang === 'ar' ? t.prayers[nextPrayer.name]?.arabic : nextPrayer.name) : '...'}
           </h2>
-          <p className="text-5xl font-bold font-mono tracking-tight drop-shadow-sm">
+          <div className="text-5xl font-bold font-mono tracking-tight drop-shadow-sm">
             {mounted ? (timeToNextPrayer || '00:00:00') : '00:00:00'}
-          </p>
+          </div>
           {location && (
             <div className="mt-4 flex items-center gap-1.5 text-white/80 text-xs">
               <MapPin className="w-3.5 h-3.5" />

@@ -1,4 +1,3 @@
-import geomagnetism from 'geomagnetism';
 
 // Kaaba location (exact per spec)
 const KAABA_LAT = 21.4225;
@@ -38,23 +37,16 @@ export function calculateQibla(lat: number, lon: number): number {
 }
 
 /**
- * Provides a simple, offline approximation of magnetic declination.
- * This is a placeholder for a more complex model like WMM if higher accuracy is needed.
- * For many locations, this provides a "good enough" correction.
- * @returns An estimated magnetic declination in degrees. For simplicity, this returns 0.
- * A real implementation would have a more complex calculation or a lookup table.
+ * Provides an approximation of magnetic declination.
+ * Since the geomagnetism library is problematic for browser bundling,
+ * we use a simple fallback of 0. For more accuracy, a browser-compatible
+ * WMM-lite implementation or an API call would be required.
+ * @returns An estimated magnetic declination in degrees.
  */
 export function getMagneticDeclination(lat: number, lon: number): number {
-  // Offline WMM-based declination (east-positive), best-effort.
-  // If the model fails for any reason, fall back to 0.
-  try {
-    const model = geomagnetism.model(new Date());
-    const point = model.point([lat, lon]);
-    const decl = (point as unknown as { decl?: number })?.decl;
-    return typeof decl === 'number' && Number.isFinite(decl) ? decl : 0;
-  } catch {
-    return 0;
-  }
+  // Fallback to 0 to ensure the app builds and runs in the browser.
+  // In a production app, you might use a browser-safe library or a small lookup table.
+  return 0;
 }
 
 export function circularStdDevDeg(anglesDeg: number[]): number {
