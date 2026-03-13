@@ -31,22 +31,19 @@ export default function BottomNav() {
               className="relative flex flex-col items-center justify-center text-center w-full no-underline group"
             >
               <div className={cn(
-                "p-2 rounded-xl transition-all duration-300 mb-1 relative flex items-center justify-center",
-                isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground group-hover:text-primary/60'
+                "p-2.5 rounded-xl transition-all duration-300 mb-1 relative flex items-center justify-center",
+                isActive ? 'bg-primary/10 text-primary shadow-sm' : 'text-muted-foreground group-hover:text-primary/60'
               )}>
-                {isActive && (
-                  <Icon className="w-6 h-6 fill-current opacity-20 absolute scale-150" />
-                )}
-                <Icon className="w-6 h-6 relative z-10" />
+                <Icon className="w-5 h-5 relative z-10" />
               </div>
               <span className={cn(
-                'text-[10px] font-bold uppercase tracking-wider transition-colors',
+                'text-[10px] font-bold uppercase tracking-wider transition-colors duration-300',
                 isActive ? 'text-primary' : 'text-muted-foreground'
               )}>
                 {label}
               </span>
               {isActive && (
-                <div className="absolute -top-1 w-8 h-1 bg-primary rounded-full" />
+                <div className="absolute -top-1 w-8 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
               )}
             </Link>
           );

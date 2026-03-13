@@ -113,7 +113,6 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
     fetchPrayerTimes();
   }, [location, currentDate, t.fetchError, prayerMethod, mounted]);
 
-  // Initial loading state during hydration to avoid mismatch
   if (!mounted || loading) {
     return (
       <div className="space-y-3">
@@ -157,36 +156,49 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
     }
   });
 
-
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-3 pb-4">
       {prayerSchedule.map((prayer) => {
         const isNext = prayer.name === nextPrayerName;
         return (
           <li key={prayer.name} className={cn(
-            "group flex items-center justify-between p-4 rounded-2xl transition-all duration-300",
+            "group flex items-center justify-between p-4 rounded-[20px] transition-all duration-300 relative overflow-hidden",
             isNext
-              ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[1.02]'
-              : 'bg-card border border-border/50 hover:border-primary/30 hover:shadow-md'
+              ? 'premium-gradient text-white shadow-xl shadow-primary/20 scale-[1.02] border border-[#D4AF37]/30'
+              : 'bg-card border border-border/50 hover:border-primary/20'
           )}>
-            <div className="flex items-center gap-4">
+            {isNext && <div className="absolute inset-0 islamic-pattern opacity-5 pointer-events-none" />}
+            
+            <div className="flex items-center gap-4 relative z-10">
               <div className={cn(
-                "p-2 rounded-xl transition-colors",
-                isNext ? 'bg-white/20 text-white' : 'bg-accent/50 text-primary group-hover:bg-primary/10'
+                "p-2.5 rounded-xl transition-colors",
+                isNext ? 'bg-white/10 text-[#D4AF37] border border-white/10 shadow-inner' : 'bg-secondary/50 text-primary'
               )}>
                 {prayerIcons[prayer.name]}
               </div>
-              <p className="font-bold text-lg font-headline">
-                {lang === 'ar' ? t.prayers[prayer.name]?.arabic : prayer.name}
-              </p>
+              <div>
+                <p className={cn(
+                  "font-bold text-lg font-headline tracking-wide",
+                  isNext ? 'text-white' : 'text-foreground'
+                )}>
+                  {lang === 'ar' ? t.prayers[prayer.name]?.arabic : prayer.name}
+                </p>
+                <p className={cn(
+                  "text-[10px] font-bold uppercase tracking-[0.1em]",
+                  isNext ? 'text-[#D4AF37]/80' : 'text-muted-foreground'
+                )}>
+                  {t.prayers[prayer.name]?.begins}
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className={cn(
-                "text-right font-mono",
+
+            <div className="relative z-10">
+              <p className={cn(
+                "font-bold text-xl font-mono tracking-tight",
                 isNext ? 'text-white' : 'text-foreground/80'
               )}>
-                <p className="font-bold text-xl">{prayer.begins}</p>
-              </div>
+                {prayer.begins}
+              </p>
             </div>
           </li>
         );
