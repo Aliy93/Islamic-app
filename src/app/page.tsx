@@ -7,7 +7,7 @@ import { translations } from '@/lib/translations';
 import { getHijriDate, HijriDateInfo } from '@/lib/hijri';
 import { format, parse, addDays, differenceInSeconds } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, MapPin, Clock, Moon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PrayerTimes from '@/components/prayer-times';
 import { toArabicNumerals } from '@/lib/utils';
@@ -213,11 +213,11 @@ export default function Home() {
           </div>
           
           {location && (
-            <div className="mt-6 flex items-center gap-2 text-[#D4AF37] text-xs font-bold uppercase tracking-widest bg-white/10 px-4 py-1.5 rounded-full border border-white/10 backdrop-blur-sm">
+            <div className="mt-6 flex items-center gap-2 text-[#D4AF37] text-[10px] font-bold uppercase tracking-[0.2em] bg-white/10 px-4 py-2 rounded-full border border-white/10 backdrop-blur-sm shadow-inner transition-all hover:bg-white/20">
               <MapPin className="w-3.5 h-3.5" />
               <span>{t.location}</span>
-              <span className="text-[9px] opacity-60 ml-1 font-mono">
-                {Math.round(location.latitude * 100) / 100}°N {Math.round(location.longitude * 100) / 100}°E
+              <span className="text-[10px] opacity-70 ml-1 font-sans">
+                {t.autoDetect}
               </span>
             </div>
           )}
