@@ -1,5 +1,5 @@
 
-import { addDays, subDays } from 'date-fns';
+import { addDays, differenceInCalendarDays, subDays } from 'date-fns';
 
 export type HijriDateInfo = {
   day: number;
@@ -9,6 +9,12 @@ export type HijriDateInfo = {
   monthNameAr: string;
   weekday: string;
 };
+
+const ESTIMATED_DAYS_PER_HIJRI_YEAR = 354.367;
+const ESTIMATED_DAYS_PER_HIJRI_MONTH = 29.531;
+const INITIAL_SEARCH_PADDING_DAYS = 45;
+const SEARCH_EXPANSION_DAYS = 30;
+const gregorianFromHijriCache = new Map<string, number>();
 
 // Using Intl.DateTimeFormat is a modern and reliable way to handle calendar conversions.
 // 'islamic-umalqura' is an algorithmic calendar, ensuring consistency.
@@ -41,6 +47,63 @@ const getHijriMonthNames = (date: Date): { monthName: string, monthNameAr: strin
     return { monthName, monthNameAr };
 }
 
+function toStableDate(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
+}
+
+function compareHijriDate(
+  left: Pick<HijriDateInfo, 'year' | 'month' | 'day'>,
+  right: Pick<HijriDateInfo, 'year' | 'month' | 'day'>
+): number {
+  if (left.year !== right.year) return left.year - right.year;
+  if (left.month !== right.month) return left.month - right.month;
+  return left.day - right.day;
+}
+
+function getCacheKey(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function findGregorianDateForHijriTarget(target: Pick<HijriDateInfo, 'year' | 'month' | 'day'>): Date {
+  const referenceDate = toStableDate(new Date());
+  const referenceHijri = getHijriDate(referenceDate, 0);
+  const estimatedOffset = Math.round(
+    (target.year - referenceHijri.year) * ESTIMATED_DAYS_PER_HIJRI_YEAR +
+    (target.month - referenceHijri.month) * ESTIMATED_DAYS_PER_HIJRI_MONTH +
+    (target.day - referenceHijri.day)
+  );
+
+  let low = addDays(referenceDate, estimatedOffset - INITIAL_SEARCH_PADDING_DAYS);
+  let high = addDays(referenceDate, estimatedOffset + INITIAL_SEARCH_PADDING_DAYS);
+
+  while (compareHijriDate(getHijriDate(low, 0), target) > 0) {
+    low = addDays(low, -SEARCH_EXPANSION_DAYS);
+  }
+
+  while (compareHijriDate(getHijriDate(high, 0), target) < 0) {
+    high = addDays(high, SEARCH_EXPANSION_DAYS);
+  }
+
+  while (differenceInCalendarDays(high, low) >= 0) {
+    const mid = addDays(low, Math.floor(differenceInCalendarDays(high, low) / 2));
+    const midHijri = getHijriDate(mid, 0);
+    const comparison = compareHijriDate(midHijri, target);
+
+    if (comparison === 0) {
+      return mid;
+    }
+
+    if (comparison < 0) {
+      low = addDays(mid, 1);
+    } else {
+      high = addDays(mid, -1);
+    }
+  }
+
+  console.warn('Could not find Gregorian date for Hijri date:', target);
+  return referenceDate;
+}
+
 export function getHijriDate(gregorianDate: Date, adjustment: number = 0): HijriDateInfo {
   // Apply adjustment to the Gregorian date before conversion
   const adjustedDate = subDays(gregorianDate, adjustment);
@@ -58,46 +121,16 @@ export function getHijriDate(gregorianDate: Date, adjustment: number = 0): Hijri
   };
 }
 
-/**
- * A simple iterative function to find a Gregorian date that corresponds to a specific Hijri date.
- * This is a workaround because JavaScript's Intl API doesn't provide a direct way to convert from Hijri to Gregorian.
- * It starts with an estimate and adjusts until it finds the correct date.
- */
 export function getGregorianDateFromHijri(year: number, month: number, day: number, adjustment: number = 0): Date {
-  // Start with today's date as a safe initial estimate.
-  let gregorianDate = new Date();
-  
-  // Use 0 adjustment for the search loop, apply user adjustment at the end.
-  let hijri = getHijriDate(gregorianDate, 0); 
+  const cacheKey = getCacheKey(year, month, day);
+  const cachedTimestamp = gregorianFromHijriCache.get(cacheKey);
+  const baseDate = cachedTimestamp
+    ? new Date(cachedTimestamp)
+    : findGregorianDateForHijriTarget({ year, month, day });
 
-  let attempts = 0;
-  // Limit attempts to prevent an infinite loop in case of an issue.
-  const MAX_ATTEMPTS = 40000; 
-
-  // Estimate the difference in days for a rough jump to get closer faster
-  const yearDiff = (year - hijri.year) * 354;
-  const monthDiff = (month - hijri.month) * 29.5;
-  const dayDiff = day - hijri.day;
-  const totalDiff = Math.round(yearDiff + monthDiff + dayDiff);
-  
-  gregorianDate = addDays(gregorianDate, totalDiff);
-
-  // Fine-tune by stepping one day at a time
-  while (attempts < MAX_ATTEMPTS) {
-      hijri = getHijriDate(gregorianDate, 0);
-      
-      if (hijri.year === year && hijri.month === month && hijri.day === day) {
-          // Found the date, now apply the user's adjustment
-          return addDays(gregorianDate, adjustment);
-      }
-      
-      const isTargetFuture = (year > hijri.year) || (year === hijri.year && month > hijri.month) || (year === hijri.year && month === hijri.month && day > hijri.day);
-
-      gregorianDate = addDays(gregorianDate, isTargetFuture ? 1 : -1);
-      attempts++;
+  if (!cachedTimestamp) {
+    gregorianFromHijriCache.set(cacheKey, baseDate.getTime());
   }
-  
-  console.warn("Could not find Gregorian date for Hijri date:", {year, month, day});
-  // Return a fallback date if not found within attempts
-  return addDays(new Date(), adjustment);
+
+  return addDays(baseDate, adjustment);
 }

@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 // Default to Muslim World League, a common choice
 const DEFAULT_PRAYER_METHOD = 2; 
 const DEFAULT_HIJRI_ADJUSTMENT = 0;
+const PRAYER_CACHE_PREFIX = 'prayerData:';
 
 type Location = {
   latitude: number;
@@ -26,6 +27,20 @@ interface SettingsContextType {
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+
+function clearPrayerCache() {
+  if (typeof window === 'undefined') return;
+
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const key = window.localStorage.key(i);
+    if (key === 'prayerData' || key?.startsWith(PRAYER_CACHE_PREFIX)) {
+      keysToRemove.push(key);
+    }
+  }
+
+  keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+}
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [prayerMethod, setPrayerMethodState] = useState<number>(() => {
@@ -82,7 +97,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const setLocation = (newLocation: Location) => {
     localStorage.setItem('location', JSON.stringify(newLocation));
     setLocationState(newLocation);
-    localStorage.removeItem('prayerData'); // Invalidate cache on location change
+    clearPrayerCache();
   }
 
   const fetchAndSetLocation = useCallback(() => {
@@ -125,7 +140,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const setPrayerMethod = (method: number) => {
     localStorage.setItem('prayerMethod', String(method));
     setPrayerMethodState(method);
-    localStorage.removeItem('prayerData');
+    clearPrayerCache();
   };
 
   const setHijriAdjustment = (adjustment: number) => {

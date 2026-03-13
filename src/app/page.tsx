@@ -12,26 +12,11 @@ import { Button } from '@/components/ui/button';
 import PrayerTimes from '@/components/prayer-times';
 import { toArabicNumerals } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-
-type PrayerTimesData = {
-  Fajr: string;
-  Sunrise: string;
-  Dhuhr: string;
-  Asr: string;
-  Maghrib: string;
-  Isha: string;
-};
+import { findNextPrayer, getPrayerSchedule, getPrayerTimes, PrayerName, PrayerTimesData } from '@/lib/prayer-times';
 
 type Prayer = {
-  name: keyof PrayerTimesData;
+  name: PrayerName;
   time: string;
-};
-
-type CachedPrayerData = {
-  timings: PrayerTimesData;
-  date: string;
-  location: { latitude: number; longitude: number };
-  method: number;
 };
 
 const IslamicCorner = ({ className }: { className?: string }) => (
@@ -53,6 +38,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [hijriDate, setHijriDate] = useState<HijriDateInfo | null>(null);
   const [locationName, setLocationName] = useState<string | null>(null);
+  const [prayerTimes, setPrayerTimes] = useState<PrayerTimesData | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -100,85 +86,39 @@ export default function Home() {
   useEffect(() => {
     if (!location || !mounted) return;
 
-    const todayStr = format(currentDate, 'yyyy-MM-dd');
-
-    const findNextPrayer = (prayerSchedule: Prayer[]) => {
-      const now = new Date();
-      let upcomingPrayer: Prayer | null = null;
-
-      for (const prayer of prayerSchedule) {
-        const prayerTime = parse(prayer.time, 'HH:mm', now);
-        if (prayerTime > now) {
-          upcomingPrayer = prayer;
-          break;
-        }
-      }
-
-      if (!upcomingPrayer) {
-        upcomingPrayer = prayerSchedule[0];
-      }
-      setNextPrayer(upcomingPrayer);
-    };
-
     const fetchPrayerTimes = async () => {
       try {
-        const timestamp = Math.floor(currentDate.getTime() / 1000);
-        const response = await fetch(`https://api.aladhan.com/v1/timings/${timestamp}?latitude=${location.latitude}&longitude=${location.longitude}&method=${prayerMethod}`);
-        if (!response.ok) throw new Error(t.fetchError);
-
-        const data = await response.json();
-        if (data.code !== 200) throw new Error(data.data || t.fetchError);
-
-        const timings: PrayerTimesData = data.data.timings;
-
-        const newCachedData: CachedPrayerData = {
-          timings,
-          date: todayStr,
-          location: location,
+        const timings = await getPrayerTimes({
+          date: currentDate,
+          location,
           method: prayerMethod,
-        };
-        localStorage.setItem('prayerData', JSON.stringify(newCachedData));
-
-        const prayerSchedule: Prayer[] = Object.entries(timings)
-          .filter(([key]) => ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].includes(key))
-          .map(([name, time]) => ({ name: name as keyof PrayerTimesData, time }));
-
-        findNextPrayer(prayerSchedule);
+          fetchErrorMessage: t.fetchError,
+        });
+        setPrayerTimes(timings);
+        setError(null);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : t.fetchError;
         setError(message);
       }
     };
 
-    const cachedDataStr = localStorage.getItem('prayerData');
-    if (cachedDataStr) {
-      const cachedData: CachedPrayerData = JSON.parse(cachedDataStr);
-      if (cachedData.date === todayStr && cachedData.location.latitude === location.latitude && cachedData.location.longitude === location.longitude && cachedData.method === prayerMethod) {
-        const prayerSchedule: Prayer[] = Object.entries(cachedData.timings)
-          .filter(([key]) => ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].includes(key))
-          .map(([name, time]) => ({ name: name as keyof PrayerTimesData, time }));
-        findNextPrayer(prayerSchedule);
-      } else {
-        fetchPrayerTimes();
-      }
-    } else {
-      fetchPrayerTimes();
-    }
-
-    const interval = setInterval(() => {
-      const prayerDataStr = localStorage.getItem('prayerData');
-      if (!prayerDataStr) return;
-      const timings = JSON.parse(prayerDataStr)?.timings;
-      if (!timings) return;
-
-      const prayerSchedule: Prayer[] = (Object.entries(timings) as [keyof PrayerTimesData, string][])
-        .filter(([key]) => ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].includes(key))
-        .map(([name, time]) => ({ name, time }));
-      if (prayerSchedule.length > 0) findNextPrayer(prayerSchedule);
-    }, 60000);
-    return () => clearInterval(interval);
+    fetchPrayerTimes();
 
   }, [location, currentDate, t.fetchError, prayerMethod, mounted]);
+
+  useEffect(() => {
+    if (!prayerTimes || !mounted) return;
+
+    const updateNextPrayer = () => {
+      const prayerSchedule = getPrayerSchedule(prayerTimes, false);
+      const upcomingPrayer = findNextPrayer(prayerSchedule);
+      setNextPrayer(upcomingPrayer as Prayer | null);
+    };
+
+    updateNextPrayer();
+    const interval = setInterval(updateNextPrayer, 60000);
+    return () => clearInterval(interval);
+  }, [mounted, prayerTimes]);
 
   useEffect(() => {
     if (!nextPrayer || !mounted) return;

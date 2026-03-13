@@ -8,26 +8,11 @@ import { useLanguage } from '@/context/language-context';
 import { useSettings } from '@/context/settings-context';
 import { translations } from '@/lib/translations';
 import { cn, toArabicNumerals } from '@/lib/utils';
-
-type PrayerTimesData = {
-  Fajr: string;
-  Sunrise: string;
-  Dhuhr: string;
-  Asr: string;
-  Maghrib: string;
-  Isha: string;
-};
+import { getPrayerSchedule, getPrayerTimes, PrayerTimesData } from '@/lib/prayer-times';
 
 type PrayerInfo = {
   name: keyof PrayerTimesData;
   begins: string;
-};
-
-type CachedPrayerData = {
-  timings: PrayerTimesData;
-  date: string;
-  location: { latitude: number; longitude: number };
-  method: number;
 };
 
 const prayerIcons: Record<keyof PrayerTimesData, React.ReactNode> = {
@@ -65,43 +50,17 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
       return;
     }
 
-    const dateStr = format(currentDate, 'yyyy-MM-dd');
-
-    const cachedDataStr = localStorage.getItem('prayerData');
-    if (cachedDataStr) {
-      try {
-        const cachedData: CachedPrayerData = JSON.parse(cachedDataStr);
-        if (cachedData.date === dateStr && cachedData.method === prayerMethod && cachedData.location.latitude === location.latitude && cachedData.location.longitude === location.longitude) {
-          setPrayerTimes(cachedData.timings);
-          setLoading(false);
-          return;
-        }
-      } catch (e) {
-        localStorage.removeItem('prayerData');
-      }
-    }
-
     const fetchPrayerTimes = async () => {
       setLoading(true);
       setError(null);
       try {
-        const timestamp = Math.floor(currentDate.getTime() / 1000);
-        const response = await fetch(`https://api.aladhan.com/v1/timings/${timestamp}?latitude=${location.latitude}&longitude=${location.longitude}&method=${prayerMethod}`);
-        if (!response.ok) throw new Error(t.fetchError);
-
-        const data = await response.json();
-        if (data.code === 200) {
-          setPrayerTimes(data.data.timings);
-          const newCachedData: CachedPrayerData = {
-            timings: data.data.timings,
-            date: dateStr,
-            location: location,
-            method: prayerMethod
-          };
-          localStorage.setItem('prayerData', JSON.stringify(newCachedData));
-        } else {
-          throw new Error(data.data || t.fetchError);
-        }
+        const timings = await getPrayerTimes({
+          date: currentDate,
+          location,
+          method: prayerMethod,
+          fetchErrorMessage: t.fetchError,
+        });
+        setPrayerTimes(timings);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : t.fetchError;
         setError(message);
@@ -141,8 +100,9 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
     );
   }
 
+  const prayerScheduleData = getPrayerSchedule(prayerTimes, true);
   const prayerSchedule: PrayerInfo[] = (Object.keys(prayerIcons) as Array<keyof PrayerTimesData>).map(name => {
-    const time24 = prayerTimes[name];
+    const time24 = prayerScheduleData.find((prayer) => prayer.name === name)?.time ?? prayerTimes[name];
     const beginsTime = parse(time24, 'HH:mm', new Date());
     let timeString = format(beginsTime, 'h:mm a');
 

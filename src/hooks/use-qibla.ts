@@ -49,6 +49,7 @@ export function useQibla() {
   const [deviceHeadingMagneticNorth, setDeviceHeadingMagneticNorth] = useState<number>(0);
   const [isCompassActive, setIsCompassActive] = useState(false);
   const [needsCalibration, setNeedsCalibration] = useState(false);
+  const [compassAccuracy, setCompassAccuracy] = useState<number | null>(null);
 
   const fallbackSupportRef = useRef<CompassSupport>('none');
 
@@ -91,9 +92,9 @@ export function useQibla() {
     const hasGeneric = typeof win.Magnetometer !== 'undefined' && typeof win.Accelerometer !== 'undefined';
     const hasDO = typeof window.DeviceOrientationEvent !== 'undefined';
 
-    // Prefer Generic Sensor API when present, but keep a fallback to DeviceOrientation.
-    fallbackSupportRef.current = hasGeneric && hasDO ? 'deviceorientation' : 'none';
-    setSupport(hasGeneric ? 'generic-sensors' : hasDO ? 'deviceorientation' : 'none');
+    // On phones, prefer the browser-normalized orientation APIs first.
+    fallbackSupportRef.current = hasDO && hasGeneric ? 'generic-sensors' : 'none';
+    setSupport(hasDO ? 'deviceorientation' : hasGeneric ? 'generic-sensors' : 'none');
 
     // On most browsers, there is no explicit permission prompt for orientation.
     // iOS Safari requires a user gesture via DeviceOrientationEvent.requestPermission().
@@ -135,12 +136,23 @@ export function useQibla() {
 
     let cancelled = false;
     setIsCompassActive(false);
+    setCompassAccuracy(null);
 
     // Reset stability buffers on start
     headingBufferRef.current = [];
     stabilityBufferRef.current = [];
 
     const cleanupFns: Array<() => void> = [];
+
+    const fallbackOrFail = (message: string) => {
+      if (fallbackSupportRef.current !== 'none' && fallbackSupportRef.current !== support) {
+        setSupport(fallbackSupportRef.current);
+        return;
+      }
+
+      setError(message);
+      setPermissionState('denied');
+    };
 
     const startGenericSensors = async () => {
       const win = window as unknown as WindowWithSensors;
@@ -176,6 +188,7 @@ export function useQibla() {
         // Adjust to screen orientation
         heading = normalizeDeg(heading + getScreenOrientationAngle());
 
+        setError(null);
         setHeading(heading);
       };
 
@@ -198,23 +211,48 @@ export function useQibla() {
     };
 
     const startDeviceOrientation = () => {
+      let hasUsableHeading = false;
+      const timeoutId = window.setTimeout(() => {
+        if (!cancelled && !hasUsableHeading) {
+          fallbackOrFail('Unable to get an absolute compass heading on this device.');
+        }
+      }, 2500);
+
       const onDO = (event: DeviceOrientationEvent) => {
         if (cancelled) return;
         let heading: number | null = null;
+        let accuracy: number | null = null;
 
         // iOS magnetic heading
-        const webkitCompassHeading = (event as unknown as { webkitCompassHeading?: number }).webkitCompassHeading;
+        const eventWithCompass = event as unknown as { webkitCompassHeading?: number; webkitCompassAccuracy?: number };
+        const webkitCompassHeading = eventWithCompass.webkitCompassHeading;
+        const webkitCompassAccuracy = eventWithCompass.webkitCompassAccuracy;
         if (typeof webkitCompassHeading === 'number') {
+          if (typeof webkitCompassAccuracy === 'number') {
+            accuracy = webkitCompassAccuracy;
+            setCompassAccuracy(webkitCompassAccuracy);
+            if (webkitCompassAccuracy > 25) {
+              setNeedsCalibration(true);
+            }
+            if (webkitCompassAccuracy > 45) {
+              return;
+            }
+          }
           heading = webkitCompassHeading;
-        } else if (event.alpha != null) {
-          // Best-effort: alpha is not reliably magnetic-north-referenced across all browsers.
-          // We treat it as a heading-like value when it's the only option.
+        } else if (event.alpha != null && (event.absolute || 'ondeviceorientationabsolute' in window)) {
+          setCompassAccuracy(null);
           heading = normalizeDeg(360 - (event.alpha as number));
         }
 
         if (heading != null) {
+          hasUsableHeading = true;
+          window.clearTimeout(timeoutId);
           heading = normalizeDeg(heading + getScreenOrientationAngle());
+          setError(null);
           setHeading(heading);
+          if (accuracy != null && accuracy <= 25) {
+            setNeedsCalibration(false);
+          }
         }
       };
 
@@ -222,7 +260,10 @@ export function useQibla() {
         'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
 
       window.addEventListener(eventName, onDO as unknown as EventListener);
-      cleanupFns.push(() => window.removeEventListener(eventName, onDO as unknown as EventListener));
+      cleanupFns.push(() => {
+        window.clearTimeout(timeoutId);
+        window.removeEventListener(eventName, onDO as unknown as EventListener);
+      });
     };
 
     (async () => {
@@ -231,13 +272,9 @@ export function useQibla() {
           try {
             await startGenericSensors();
           } catch (e: unknown) {
-            // If Generic Sensors are blocked/unavailable (common on desktop and some mobile browsers),
-            // fall back to DeviceOrientation when possible.
-            if (fallbackSupportRef.current === 'deviceorientation') {
-              setSupport('deviceorientation');
-              return;
-            }
-            throw e;
+            const message = e instanceof Error ? e.message : String(e);
+            fallbackOrFail(`Compass unavailable: ${message}`);
+            return;
           }
         } else {
           startDeviceOrientation();
@@ -267,6 +304,7 @@ export function useQibla() {
     isCompassActive,
     isSupported: support !== 'none',
     support,
+    compassAccuracy,
     permissionState,
     requestPermission,
     error,

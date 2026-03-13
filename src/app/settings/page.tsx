@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '@/context/language-context';
 import { useSettings } from '@/context/settings-context';
 import { translations } from '@/lib/translations';
@@ -9,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
 import { Globe, CalendarDays, BookOpen, MapPin } from 'lucide-react';
 
 const prayerCalculationMethods = [
@@ -30,7 +32,45 @@ export default function SettingsPage() {
     isManualLocation, setIsManualLocation,
     fetchAndSetLocation 
   } = useSettings();
+  const { toast } = useToast();
   const t = translations[lang];
+  const [locationDraft, setLocationDraft] = useState({ latitude: '', longitude: '' });
+
+  useEffect(() => {
+    setLocationDraft({
+      latitude: location?.latitude?.toString() ?? '',
+      longitude: location?.longitude?.toString() ?? '',
+    });
+  }, [location, isManualLocation]);
+
+  const parsedLatitude = useMemo(() => Number(locationDraft.latitude), [locationDraft.latitude]);
+  const parsedLongitude = useMemo(() => Number(locationDraft.longitude), [locationDraft.longitude]);
+  const hasCompleteDraft = locationDraft.latitude.trim() !== '' && locationDraft.longitude.trim() !== '';
+  const isManualLocationValid =
+    hasCompleteDraft &&
+    Number.isFinite(parsedLatitude) &&
+    Number.isFinite(parsedLongitude) &&
+    parsedLatitude >= -90 &&
+    parsedLatitude <= 90 &&
+    parsedLongitude >= -180 &&
+    parsedLongitude <= 180;
+
+  const saveManualLocation = () => {
+    if (!isManualLocationValid) {
+      toast({
+        variant: 'destructive',
+        title: t.location,
+        description: t.invalidCoordinates,
+      });
+      return;
+    }
+
+    setLocation({ latitude: parsedLatitude, longitude: parsedLongitude });
+    toast({
+      title: t.location,
+      description: t.locationSaved,
+    });
+  };
 
   return (
     <div className="p-4 space-y-6" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
@@ -77,15 +117,16 @@ export default function SettingsPage() {
             />
           </div>
           {isManualLocation ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label htmlFor="latitude">{t.latitude}</Label>
                   <Input
                     id="latitude"
                     type="number"
-                    value={location?.latitude ?? ''}
-                    onChange={(e) => setLocation({ ...location, latitude: parseFloat(e.target.value) || 0, longitude: location?.longitude ?? 0 })}
+                    inputMode="decimal"
+                    value={locationDraft.latitude}
+                    onChange={(e) => setLocationDraft((current) => ({ ...current, latitude: e.target.value }))}
                     placeholder="e.g. 34.0522"
                   />
                 </div>
@@ -94,12 +135,17 @@ export default function SettingsPage() {
                   <Input
                     id="longitude"
                     type="number"
-                    value={location?.longitude ?? ''}
-                    onChange={(e) => setLocation({ ...location, latitude: location?.latitude ?? 0, longitude: parseFloat(e.target.value) || 0 })}
+                    inputMode="decimal"
+                    value={locationDraft.longitude}
+                    onChange={(e) => setLocationDraft((current) => ({ ...current, longitude: e.target.value }))}
                     placeholder="e.g. -118.2437"
                   />
                 </div>
               </div>
+              <p className="text-sm text-muted-foreground">{t.manualLocationHint}</p>
+              <Button onClick={saveManualLocation} className="w-full" disabled={!isManualLocationValid}>
+                {t.saveLocation}
+              </Button>
             </div>
           ) : (
             <Button onClick={fetchAndSetLocation} className="w-full">

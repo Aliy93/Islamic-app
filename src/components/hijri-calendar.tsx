@@ -138,12 +138,13 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
     ? ['سبت', 'أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة'] 
     : ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
     
+  const firstCurrentMonthDay = calendarGrid.flat().find((day) => day.isCurrentMonth);
   const firstDayInGrid = calendarGrid[0]?.[0];
   const lastDayInGrid = calendarGrid[calendarGrid.length - 1]?.[6];
 
   const getHijriHeader = () => {
-      if (!firstDayInGrid) return "";
-      const hijriInfo = getHijriDate(getGregorianDateFromHijri(currentHijriDate.year, currentHijriDate.month, 1, hijriAdjustment), hijriAdjustment);
+      if (!firstCurrentMonthDay) return "";
+      const hijriInfo = firstCurrentMonthDay.hijri;
       return lang === 'ar'
           ? `${hijriInfo.monthNameAr} ${toArabicNumerals(hijriInfo.year)}`
           : `${hijriInfo.monthName} ${hijriInfo.year}`;
