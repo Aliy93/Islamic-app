@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Sun, Sunrise, Sunset, Moon } from 'lucide-react';
+import { Sun, Sunrise, Sunset, Moon, CloudSun } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import { useLanguage } from '@/context/language-context';
 import { useSettings } from '@/context/settings-context';
@@ -19,24 +19,24 @@ type PrayerTimesData = {
 };
 
 type PrayerInfo = {
-    name: keyof PrayerTimesData;
-    begins: string;
-}
+  name: keyof PrayerTimesData;
+  begins: string;
+};
 
 type CachedPrayerData = {
-    timings: PrayerTimesData;
-    date: string;
-    location: { latitude: number; longitude: number };
-    method: number;
-}
+  timings: PrayerTimesData;
+  date: string;
+  location: { latitude: number; longitude: number };
+  method: number;
+};
 
 const prayerIcons: Record<keyof PrayerTimesData, React.ReactNode> = {
-    Fajr: <Moon className="w-5 h-5" />,
-    Sunrise: <Sunrise className="w-5 h-5" />,
-    Dhuhr: <Sun className="w-5 h-5" />,
-    Asr: <Sun className="w-5 h-5 opacity-70" />,
-    Maghrib: <Sunset className="w-5 h-5" />,
-    Isha: <Moon className="w-5 h-5" />,
+  Fajr: <Moon className="w-5 h-5" />,
+  Sunrise: <Sunrise className="w-5 h-5" />,
+  Dhuhr: <Sun className="w-5 h-5" />,
+  Asr: <CloudSun className="w-5 h-5" />,
+  Maghrib: <Sunset className="w-5 h-5" />,
+  Isha: <Moon className="w-5 h-5" />,
 };
 
 interface PrayerTimesProps {
@@ -52,45 +52,51 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentDate, setCurrentDate] = useState(initialDate ? new Date(initialDate) : new Date());
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     setCurrentDate(initialDate ? new Date(initialDate) : new Date());
   }, [initialDate]);
 
   useEffect(() => {
-    if (!location) {
-      setLoading(true); // Keep loading if no location
+    if (!location || !currentDate || !mounted) {
       return;
     }
-    
+
     const dateStr = format(currentDate, 'yyyy-MM-dd');
 
     const cachedDataStr = localStorage.getItem('prayerData');
     if (cachedDataStr) {
+      try {
         const cachedData: CachedPrayerData = JSON.parse(cachedDataStr);
-        if(cachedData.date === dateStr && cachedData.method === prayerMethod && cachedData.location.latitude === location.latitude && cachedData.location.longitude === location.longitude) {
-            setPrayerTimes(cachedData.timings);
-            setLoading(false);
-            return;
+        if (cachedData.date === dateStr && cachedData.method === prayerMethod && cachedData.location.latitude === location.latitude && cachedData.location.longitude === location.longitude) {
+          setPrayerTimes(cachedData.timings);
+          setLoading(false);
+          return;
         }
+      } catch (e) {
+        localStorage.removeItem('prayerData');
+      }
     }
-  
+
     const fetchPrayerTimes = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(currentDate.getTime()/1000)}?latitude=${location.latitude}&longitude=${location.longitude}&method=${prayerMethod}`);
+        const timestamp = Math.floor(currentDate.getTime() / 1000);
+        const response = await fetch(`https://api.aladhan.com/v1/timings/${timestamp}?latitude=${location.latitude}&longitude=${location.longitude}&method=${prayerMethod}`);
         if (!response.ok) throw new Error(t.fetchError);
-        
+
         const data = await response.json();
         if (data.code === 200) {
           setPrayerTimes(data.data.timings);
           const newCachedData: CachedPrayerData = {
-              timings: data.data.timings,
-              date: dateStr,
-              location: location,
-              method: prayerMethod
+            timings: data.data.timings,
+            date: dateStr,
+            location: location,
+            method: prayerMethod
           };
           localStorage.setItem('prayerData', JSON.stringify(newCachedData));
         } else {
@@ -105,13 +111,14 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
     };
 
     fetchPrayerTimes();
-  }, [location, currentDate, t.fetchError, prayerMethod]);
+  }, [location, currentDate, t.fetchError, prayerMethod, mounted]);
 
-  if (loading) {
+  // Initial loading state during hydration to avoid mismatch
+  if (!mounted || loading) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          <Skeleton key={i} className="h-16 w-full rounded-2xl" />
         ))}
       </div>
     );
@@ -119,22 +126,22 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
 
   if (error) {
     return (
-        <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-        </Alert>
+      <Alert variant="destructive" className="rounded-2xl">
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
     );
   }
 
   if (!prayerTimes) {
     return (
-         <Alert>
-            <AlertTitle>{t.locationNeeded}</AlertTitle>
-            <AlertDescription>{t.locationNeededMsg}</AlertDescription>
-        </Alert>
+      <Alert className="rounded-2xl border-accent bg-accent/30">
+        <AlertTitle className="font-bold">{t.locationNeeded}</AlertTitle>
+        <AlertDescription>{t.locationNeededMsg}</AlertDescription>
+      </Alert>
     );
   }
-  
+
   const prayerSchedule: PrayerInfo[] = (Object.keys(prayerIcons) as Array<keyof PrayerTimesData>).map(name => {
     const time24 = prayerTimes[name];
     const beginsTime = parse(time24, 'HH:mm', new Date());
@@ -145,32 +152,45 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
     }
 
     return {
-        name,
-        begins: timeString,
+      name,
+      begins: timeString,
     }
   });
 
 
   return (
-    <ul className="space-y-2">
-        {prayerSchedule.map((prayer) => (
-            <li key={prayer.name} className={cn(
-                "flex items-center justify-between p-3 rounded-lg text-foreground transition-colors font-sans",
-                prayer.name === nextPrayerName ? 'bg-primary text-primary-foreground' : 'bg-card'
-            )}>
-                <div className="flex items-center gap-4">
-                    <div className={cn(prayer.name === nextPrayerName ? 'text-primary-foreground' : 'text-primary')}>
-                       {prayerIcons[prayer.name]}
-                   </div>
-                    <p className="font-bold text-lg">{lang === 'ar' ? t.prayers[prayer.name]?.arabic : prayer.name}</p>
-                </div>
-                 <div className="flex items-center gap-3 text-right">
-                    <div className={cn("text-right font-code", lang === 'ar' ? 'ml-2' : 'mr-2')}>
-                        <p className="font-bold text-lg">{prayer.begins}</p>
-                    </div>
-                </div>
-            </li>
-        ))}
+    <ul className="space-y-3">
+      {prayerSchedule.map((prayer) => {
+        const isNext = prayer.name === nextPrayerName;
+        return (
+          <li key={prayer.name} className={cn(
+            "group flex items-center justify-between p-4 rounded-2xl transition-all duration-300",
+            isNext
+              ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[1.02]'
+              : 'bg-card border border-border/50 hover:border-primary/30 hover:shadow-md'
+          )}>
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "p-2 rounded-xl transition-colors",
+                isNext ? 'bg-white/20 text-white' : 'bg-accent/50 text-primary group-hover:bg-primary/10'
+              )}>
+                {prayerIcons[prayer.name]}
+              </div>
+              <p className="font-bold text-lg font-headline">
+                {lang === 'ar' ? t.prayers[prayer.name]?.arabic : prayer.name}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "text-right font-mono",
+                isNext ? 'text-white' : 'text-foreground/80'
+              )}>
+                <p className="font-bold text-xl">{prayer.begins}</p>
+              </div>
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }
