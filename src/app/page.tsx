@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,7 +7,7 @@ import { translations } from '@/lib/translations';
 import { getHijriDate, HijriDateInfo } from '@/lib/hijri';
 import { format, parse, addDays, differenceInSeconds } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, MapPin, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Clock, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PrayerTimes from '@/components/prayer-times';
 import { toArabicNumerals } from '@/lib/utils';
@@ -35,6 +34,13 @@ type CachedPrayerData = {
   method: number;
 };
 
+const IslamicCorner = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 100 100" className={`absolute w-12 h-12 text-[#D4AF37]/40 ${className}`} fill="currentColor">
+    <path d="M0 0 L100 0 L100 10 L10 10 L10 100 L0 100 Z" />
+    <circle cx="20" cy="20" r="5" />
+  </svg>
+);
+
 export default function Home() {
   const { lang } = useLanguage();
   const { prayerMethod, location, locationError } = useSettings();
@@ -47,12 +53,10 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [hijriDate, setHijriDate] = useState<HijriDateInfo | null>(null);
 
-  // Initialize mounting state and stable date-dependent data
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Update Hijri date on the client to avoid hydration mismatch
   useEffect(() => {
     if (mounted) {
       setHijriDate(getHijriDate(currentDate));
@@ -185,23 +189,32 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full p-5 space-y-6" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       {/* Premium Next Prayer Card */}
-      <div className="premium-gradient text-white p-6 rounded-[24px] shadow-xl relative overflow-hidden transition-all hover:shadow-2xl">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/20 rounded-full -ml-10 -mb-10 blur-xl" />
+      <div className="premium-gradient border border-[#D4AF37]/30 text-white p-6 rounded-[24px] shadow-2xl relative overflow-hidden transition-all group">
+        <div className="absolute inset-0 islamic-pattern opacity-10" />
+        
+        {/* Corner Ornaments */}
+        <IslamicCorner className="top-2 left-2" />
+        <IslamicCorner className="top-2 right-2 rotate-90" />
+        <IslamicCorner className="bottom-2 left-2 -rotate-90" />
+        <IslamicCorner className="bottom-2 right-2 rotate-180" />
+
         <div className="relative z-10 flex flex-col items-center">
-          <div className="flex items-center gap-2 mb-2 bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
-            <Clock className="w-4 h-4" />
-            <p className="text-xs font-medium uppercase tracking-wider">{t.timeTill}</p>
+          <div className="flex items-center gap-2 mb-3 bg-[#D4AF37]/20 border border-[#D4AF37]/40 px-4 py-1.5 rounded-full backdrop-blur-md">
+            <Moon className="w-4 h-4 text-[#D4AF37]" />
+            <p className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-[0.2em]">{t.timeTill}</p>
           </div>
-          <h2 className="text-3xl font-bold mb-1 font-headline">
+          
+          <h2 className="text-2xl font-bold mb-2 font-headline text-white/90 tracking-wide">
             {mounted && nextPrayer ? (lang === 'ar' ? t.prayers[nextPrayer.name]?.arabic : nextPrayer.name) : '...'}
           </h2>
-          <div className="text-5xl font-bold font-mono tracking-tight drop-shadow-sm">
+          
+          <div className="text-6xl font-black font-mono tracking-tighter drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] text-white">
             {mounted ? (timeToNextPrayer || '00:00:00') : '00:00:00'}
           </div>
+          
           {location && (
-            <div className="mt-4 flex items-center gap-1.5 text-white/80 text-xs">
-              <MapPin className="w-3.5 h-3.5" />
+            <div className="mt-5 flex items-center gap-2 text-[#D4AF37]/80 text-[10px] font-medium tracking-wider bg-black/10 px-3 py-1 rounded-lg">
+              <MapPin className="w-3 h-3" />
               <span>{Math.round(location.latitude * 100) / 100}, {Math.round(location.longitude * 100) / 100}</span>
             </div>
           )}
@@ -210,35 +223,35 @@ export default function Home() {
 
       {/* Modern Date Section */}
       <div className="flex items-center justify-between px-2">
-        <Button variant="ghost" size="icon" onClick={() => handleDateChange('prev')} className="rounded-full hover:bg-accent">
+        <Button variant="ghost" size="icon" onClick={() => handleDateChange('prev')} className="rounded-full hover:bg-accent/50">
           {lang === 'ar' ? <ChevronRight className="h-6 w-6 text-primary" /> : <ChevronLeft className="h-6 w-6 text-primary" />}
         </Button>
         <div className="text-center">
-          <div className="text-xl font-bold text-foreground font-headline">
+          <div className="text-xl font-bold text-foreground font-headline leading-tight">
             {mounted && hijriDate ? (
               lang === 'ar'
                 ? `${hijriDate.monthNameAr} ${toArabicNumerals(hijriDate.day)}, ${toArabicNumerals(hijriDate.year)} هـ`
                 : `${hijriDate.monthName} ${hijriDate.day}, ${hijriDate.year} AH`
             ) : <div className="h-7 w-32 bg-muted animate-pulse rounded mx-auto" />}
           </div>
-          <div className="text-sm text-muted-foreground font-medium uppercase tracking-wide mt-0.5">
-            {mounted ? format(currentDate, 'eeee, d MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined }) : <div className="h-4 w-40 bg-muted animate-pulse rounded mx-auto mt-2" />}
+          <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em] mt-1.5 flex justify-center">
+            {mounted ? format(currentDate, 'eeee, d MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined }) : <div className="h-3 w-40 bg-muted animate-pulse rounded" />}
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => handleDateChange('next')} className="rounded-full hover:bg-accent">
+        <Button variant="ghost" size="icon" onClick={() => handleDateChange('next')} className="rounded-full hover:bg-accent/50">
           {lang === 'ar' ? <ChevronLeft className="h-6 w-6 text-primary" /> : <ChevronRight className="h-6 w-6 text-primary" />}
         </Button>
       </div>
 
       {error && (
-        <Alert variant="destructive" className="rounded-xl">
+        <Alert variant="destructive" className="rounded-2xl border-destructive/20 shadow-sm">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {!location && !locationError && mounted && (
-        <Alert className="rounded-xl bg-accent/50 border-accent">
+        <Alert className="rounded-2xl bg-accent/30 border-accent/40 shadow-sm">
           <AlertTitle className="font-bold">{t.locationNeeded}</AlertTitle>
           <AlertDescription>{t.locationNeededMsg}</AlertDescription>
         </Alert>
@@ -246,7 +259,11 @@ export default function Home() {
 
       {/* Prayer Times Section */}
       <div className="flex-grow">
-        <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4 px-2">{t.todayPrayerTimes}</h4>
+        <div className="flex items-center gap-3 mb-5 px-2">
+          <div className="h-px bg-muted flex-grow" />
+          <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t.todayPrayerTimes}</h4>
+          <div className="h-px bg-muted flex-grow" />
+        </div>
         <PrayerTimes currentDate={currentDate.getTime()} nextPrayerName={nextPrayer?.name} />
       </div>
     </div>

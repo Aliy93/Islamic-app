@@ -33,6 +33,8 @@
     --ring: 142 76% 36%;
 
     --radius: 1.25rem; /* Larger radius for modern feel */
+    
+    --gold: 45 60% 65%;
   }
 
   .dark {
@@ -81,5 +83,9 @@
 }
 
 .premium-gradient {
-  background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%);
+  background: linear-gradient(135deg, #064E3B 0%, #065F46 100%);
+}
+
+.islamic-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l5.878 18.09h19.021l-15.389 11.181 5.878 18.09-15.388-11.182-15.388 11.182 5.878-18.09L.101 18.09h19.021L30 0z' fill='%23D4AF37' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
 }
