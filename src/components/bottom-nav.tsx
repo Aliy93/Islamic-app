@@ -31,10 +31,12 @@ export default function BottomNav() {
               className="relative flex flex-col items-center justify-center text-center w-full no-underline group"
             >
               <div className={cn(
-                "p-2 rounded-xl transition-all duration-300 mb-1",
+                "p-2 rounded-xl transition-all duration-300 mb-1 relative flex items-center justify-center",
                 isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground group-hover:text-primary/60'
               )}>
-                <Icon className={cn('w-6 h-6', isActive ? 'fill-current opacity-20 absolute scale-150' : '')} />
+                {isActive && (
+                  <Icon className="w-6 h-6 fill-current opacity-20 absolute scale-150" />
+                )}
                 <Icon className="w-6 h-6 relative z-10" />
               </div>
               <span className={cn(
