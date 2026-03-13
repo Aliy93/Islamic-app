@@ -213,16 +213,16 @@ export default function Home() {
           {lang === 'ar' ? <ChevronRight className="h-6 w-6 text-primary" /> : <ChevronLeft className="h-6 w-6 text-primary" />}
         </Button>
         <div className="text-center">
-          <h3 className="text-xl font-bold text-foreground font-headline">
+          <div className="text-xl font-bold text-foreground font-headline">
             {mounted && hijriDate ? (
               lang === 'ar'
                 ? `${hijriDate.monthNameAr} ${toArabicNumerals(hijriDate.day)}, ${toArabicNumerals(hijriDate.year)} هـ`
                 : `${hijriDate.monthName} ${hijriDate.day}, ${hijriDate.year} AH`
             ) : <div className="h-7 w-32 bg-muted animate-pulse rounded mx-auto" />}
-          </h3>
-          <p className="text-sm text-muted-foreground font-medium uppercase tracking-wide mt-0.5">
+          </div>
+          <div className="text-sm text-muted-foreground font-medium uppercase tracking-wide mt-0.5">
             {mounted ? format(currentDate, 'eeee, d MMMM yyyy', { locale: lang === 'ar' ? arSA : undefined }) : <div className="h-4 w-40 bg-muted animate-pulse rounded mx-auto mt-2" />}
-          </p>
+          </div>
         </div>
         <Button variant="ghost" size="icon" onClick={() => handleDateChange('next')} className="rounded-full hover:bg-accent">
           {lang === 'ar' ? <ChevronLeft className="h-6 w-6 text-primary" /> : <ChevronRight className="h-6 w-6 text-primary" />}
