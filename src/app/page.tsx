@@ -213,9 +213,12 @@ export default function Home() {
           </div>
           
           {location && (
-            <div className="mt-5 flex items-center gap-2 text-[#D4AF37]/80 text-[10px] font-medium tracking-wider bg-black/10 px-3 py-1 rounded-lg">
-              <MapPin className="w-3 h-3" />
-              <span>{Math.round(location.latitude * 100) / 100}, {Math.round(location.longitude * 100) / 100}</span>
+            <div className="mt-6 flex items-center gap-2 text-[#D4AF37] text-xs font-bold uppercase tracking-widest bg-white/10 px-4 py-1.5 rounded-full border border-white/10 backdrop-blur-sm">
+              <MapPin className="w-3.5 h-3.5" />
+              <span>{t.location}</span>
+              <span className="text-[9px] opacity-60 ml-1 font-mono">
+                {Math.round(location.latitude * 100) / 100}°N {Math.round(location.longitude * 100) / 100}°E
+              </span>
             </div>
           )}
         </div>
