@@ -52,6 +52,7 @@ export default function Home() {
   const [timeToNextPrayer, setTimeToNextPrayer] = useState('');
   const [mounted, setMounted] = useState(false);
   const [hijriDate, setHijriDate] = useState<HijriDateInfo | null>(null);
+  const [locationName, setLocationName] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -68,6 +69,33 @@ export default function Home() {
       setError(locationError);
     }
   }, [locationError]);
+
+  // Reverse Geocoding to get City, Country
+  useEffect(() => {
+    if (!location || !mounted) return;
+
+    const fetchLocationName = async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${location.latitude}&lon=${location.longitude}`
+        );
+        const data = await response.json();
+        const address = data.address;
+        const city = address.city || address.town || address.village || address.suburb || address.state_district;
+        const country = address.country;
+
+        if (city && country) {
+          setLocationName(`${city}, ${country}`);
+        } else if (country) {
+          setLocationName(country);
+        }
+      } catch (err) {
+        // Silently fail and fallback to translations
+      }
+    };
+
+    fetchLocationName();
+  }, [location, mounted]);
 
   useEffect(() => {
     if (!location || !mounted) return;
@@ -217,7 +245,7 @@ export default function Home() {
               <MapPin className="w-3.5 h-3.5" />
               <span>{t.location}</span>
               <span className="text-[10px] opacity-70 ml-1 font-sans">
-                {t.autoDetect}
+                {locationName || t.autoDetect}
               </span>
             </div>
           )}
