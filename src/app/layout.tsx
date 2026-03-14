@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from '@/context/language-context';
 import { SettingsProvider } from '@/context/settings-context';
 import BottomNav from '@/components/bottom-nav';
-import { Alegreya, Noto_Kufi_Arabic } from 'next/font/google';
+import { Alegreya, Noto_Kufi_Arabic, Noto_Sans_Ethiopic } from 'next/font/google';
 
 const alegreya = Alegreya({
   subsets: ['latin'],
@@ -20,6 +20,13 @@ const notoKufiArabic = Noto_Kufi_Arabic({
   variable: '--font-noto-kufi-arabic',
 });
 
+const notoSansEthiopic = Noto_Sans_Ethiopic({
+  subsets: ['ethiopic'],
+  weight: ['400', '500', '700'],
+  display: 'swap',
+  variable: '--font-noto-sans-ethiopic',
+});
+
 export const metadata: Metadata = {
   title: 'Muslim App',
   description: 'Gregorian-Hijri Calendar with Islamic Events',
@@ -32,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${alegreya.variable} ${notoKufiArabic.variable} font-sans antialiased`}>
+      <body className={`${alegreya.variable} ${notoKufiArabic.variable} ${notoSansEthiopic.variable} font-sans antialiased`}>
         <LanguageProvider>
           <SettingsProvider>
             <div className="max-w-md mx-auto bg-background shadow-lg min-h-screen flex flex-col">

@@ -11,9 +11,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-alegreya)', 'var(--font-noto-kufi-arabic)', 'Alegreya', 'Noto Kufi Arabic', 'sans-serif'],
-        body: ['var(--font-alegreya)', 'var(--font-noto-kufi-arabic)', 'Alegreya', 'Noto Kufi Arabic', 'serif'],
-        headline: ['var(--font-alegreya)', 'var(--font-noto-kufi-arabic)', 'Alegreya', 'Noto Kufi Arabic', 'serif'],
+        sans: ['var(--font-alegreya)', 'var(--font-noto-kufi-arabic)', 'var(--font-noto-sans-ethiopic)', 'Alegreya', 'Noto Kufi Arabic', 'Noto Sans Ethiopic', 'sans-serif'],
+        body: ['var(--font-alegreya)', 'var(--font-noto-kufi-arabic)', 'var(--font-noto-sans-ethiopic)', 'Alegreya', 'Noto Kufi Arabic', 'Noto Sans Ethiopic', 'serif'],
+        headline: ['var(--font-alegreya)', 'var(--font-noto-kufi-arabic)', 'var(--font-noto-sans-ethiopic)', 'Alegreya', 'Noto Kufi Arabic', 'Noto Sans Ethiopic', 'serif'],
         code: ['monospace'],
       },
       colors: {

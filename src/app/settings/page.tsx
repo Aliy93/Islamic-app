@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { useLanguage } from '@/context/language-context';
+import { getLanguageDefinition, Language, isRtlLanguage, supportedLanguages, useLanguage } from '@/context/language-context';
 import { useSettings } from '@/context/settings-context';
 import { translations } from '@/lib/translations';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ const prayerCalculationMethods = [
 
 
 export default function SettingsPage() {
-  const { lang, toggleLang } = useLanguage();
+  const { lang, setLang } = useLanguage();
   const { 
     prayerMethod, setPrayerMethod, 
     hijriAdjustment, setHijriAdjustment,
@@ -35,6 +35,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const t = translations[lang];
   const [locationDraft, setLocationDraft] = useState({ latitude: '', longitude: '' });
+  const currentLanguage = getLanguageDefinition(lang);
 
   useEffect(() => {
     setLocationDraft({
@@ -73,7 +74,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-4 space-y-6" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="p-4 space-y-6" dir={isRtlLanguage(lang) ? 'rtl' : 'ltr'}>
        <header className="bg-background text-foreground pb-4 flex items-center justify-between sticky top-0 z-10">
         <h1 className="text-xl font-bold">{t.settings}</h1>
       </header>
@@ -84,16 +85,27 @@ export default function SettingsPage() {
             <Globe className="w-5 h-5" />
             {t.language}
           </CardTitle>
+          <CardDescription>{t.languageDescription}</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="language-toggle" className="text-base">
-              {lang === 'en' ? 'Current: English' : 'الحالي: العربية'}
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="language-select" className="text-base">
+              {t.currentLanguage}
             </Label>
-            <Button onClick={toggleLang} id="language-toggle">
-              {lang === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
-            </Button>
+            <p className="text-sm text-muted-foreground">{currentLanguage.label} ({currentLanguage.nativeLabel})</p>
           </div>
+          <Select value={lang} onValueChange={(value) => setLang(value as Language)}>
+            <SelectTrigger id="language-select">
+              <SelectValue placeholder={t.selectLanguage} />
+            </SelectTrigger>
+            <SelectContent>
+              {supportedLanguages.map((language) => (
+                <SelectItem key={language.value} value={language.value}>
+                  {language.label} ({language.nativeLabel})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 

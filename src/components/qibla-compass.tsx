@@ -1,16 +1,16 @@
 'use client';
 
 import { useQibla } from '@/hooks/use-qibla';
-import { useLanguage } from '@/context/language-context';
+import { Language, useLanguage, usesEasternArabicNumerals } from '@/context/language-context';
 import { translations } from '@/lib/translations';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Compass, RotateCw, Zap, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { toArabicNumerals } from '@/lib/utils';
 import { useSettings } from '@/context/settings-context';
 import { useEffect } from 'react';
+import { formatLocalizedNumber } from '@/lib/localization';
 
 // Kaaba SVG Icon
 const KaabaIcon = () => (
@@ -80,9 +80,9 @@ const QiblaNeedle = ({ rotation }: { rotation: number }) => (
   </div>
 );
 
-function formatBearing(value: number, lang: 'en' | 'ar') {
+function formatBearing(value: number, lang: Language) {
   const rounded = value.toFixed(0);
-  return lang === 'ar' ? `${toArabicNumerals(rounded)}°` : `${rounded}°`;
+  return `${formatLocalizedNumber(rounded, lang)}°`;
 }
 
 function getSignedTurnAngle(angle: number) {
@@ -91,10 +91,10 @@ function getSignedTurnAngle(angle: number) {
 
 function renderCompassShell() {
   return (
-    <div className="relative h-80 w-80 rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.10)_0%,rgba(255,255,255,0)_62%)]">
+    <div className="brand-compass-shell relative h-80 w-80 rounded-full">
       <div className="absolute inset-4 rounded-full border border-primary/15 bg-white/70 shadow-inner"></div>
       <div className="absolute inset-7 rounded-full border-[5px] border-primary/70"></div>
-      <div className="absolute inset-[58px] rounded-full border border-primary/10 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.08),rgba(255,255,255,0)_72%)]"></div>
+      <div className="brand-compass-core absolute inset-[58px] rounded-full border border-primary/10"></div>
       <div className="relative h-full w-full rounded-full transition-transform duration-200 ease-in-out">
         {Array.from({ length: 120 }).map((_, i) => (
           <div
@@ -106,13 +106,13 @@ function renderCompassShell() {
           </div>
         ))}
 
-        <span className="absolute top-8 left-1/2 -translate-x-1/2 font-bold text-xl text-primary drop-shadow-sm">N</span>
-        <span className="absolute bottom-8 left-1/2 -translate-x-1/2 font-bold text-xl text-primary/75">S</span>
-        <span className="absolute left-8 top-1/2 -translate-y-1/2 font-bold text-xl text-primary/75">W</span>
-        <span className="absolute right-8 top-1/2 -translate-y-1/2 font-bold text-xl text-primary/75">E</span>
+        <span className="absolute top-8 left-1/2 -translate-x-1/2 font-bold text-xl text-[#DCA15D] drop-shadow-sm">N</span>
+        <span className="absolute bottom-8 left-1/2 -translate-x-1/2 font-bold text-xl text-[#DCA15D]/85">S</span>
+        <span className="absolute left-8 top-1/2 -translate-y-1/2 font-bold text-xl text-[#DCA15D]/85">W</span>
+        <span className="absolute right-8 top-1/2 -translate-y-1/2 font-bold text-xl text-[#DCA15D]/85">E</span>
       </div>
 
-      <div className="absolute left-1/2 top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary-foreground bg-primary shadow-[0_0_0_8px_rgba(16,185,129,0.12)]"></div>
+      <div className="brand-compass-center-shadow absolute left-1/2 top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary-foreground bg-primary"></div>
     </div>
   );
 }
@@ -132,7 +132,7 @@ function CompassFrame({
         {topLabel}
       </div>
       {isAligned ? (
-        <div className="absolute inset-6 rounded-full border-4 border-emerald-500/70 bg-emerald-500/5 shadow-[0_0_28px_rgba(16,185,129,0.25)]" />
+        <div className="brand-aligned-ring absolute inset-6 rounded-full border-4" />
       ) : null}
       {renderCompassShell()}
       {children}
@@ -147,14 +147,14 @@ function StaticQiblaGuide({
   retryLabel,
   onRetry,
 }: {
-  lang: 'en' | 'ar';
+  lang: Language;
   bearing: number;
   body: string;
   retryLabel?: string;
   onRetry?: () => void;
 }) {
   const t = translations[lang];
-  const topLabel = lang === 'ar' ? 'أعلى الهاتف' : 'Phone Top';
+  const topLabel = t.phoneTop;
 
   return (
     <div className="flex flex-col items-center gap-5 w-full">
@@ -221,7 +221,7 @@ export default function QiblaCompass() {
   const turnInstruction = isAligned
     ? t.qiblaAligned
     : `${signedTurnAngle > 0 ? t.qiblaTurnRight : t.qiblaTurnLeft} ${formatBearing(Math.abs(signedTurnAngle), lang)}`;
-  const topLabel = lang === 'ar' ? 'أعلى الهاتف' : 'Phone Top';
+  const topLabel = t.phoneTop;
 
   useEffect(() => {
     if (!location && !locationError) {
@@ -310,7 +310,7 @@ export default function QiblaCompass() {
             <AlertDescription>{t.calibrating}</AlertDescription>
           </Alert>
         )}
-        <Card className="w-full max-w-[26rem] rounded-[32px] border-primary/10 bg-[linear-gradient(180deg,rgba(16,185,129,0.08),rgba(255,255,255,0.96))] shadow-[0_24px_70px_rgba(6,95,70,0.12)] backdrop-blur">
+        <Card className="brand-card-surface w-full max-w-[26rem] rounded-[32px] border-primary/10 backdrop-blur">
           <CardContent className="flex flex-col items-center gap-6 p-5 sm:p-6">
             <div className="flex items-center gap-2 rounded-full border border-primary/10 bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary shadow-sm">
               <Compass className="h-3.5 w-3.5" />
@@ -329,7 +329,7 @@ export default function QiblaCompass() {
               <div className={cn(
                 'mt-1 inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm',
                 isAligned
-                  ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-700'
+                  ? 'border border-[#DCA15D]/40 bg-[#DCA15D]/15 text-[#0B552B]'
                   : 'border border-primary/20 bg-primary/10 text-primary'
               )}>
                 {turnInstruction}
@@ -344,18 +344,18 @@ export default function QiblaCompass() {
 
             <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-[22px] border border-primary/10 bg-white/80 p-4 text-center shadow-sm">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{lang === 'ar' ? 'الزاوية' : 'Bearing'}</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{t.bearing}</p>
                 <p className="mt-2 text-2xl font-bold text-primary">{formatBearing(qiblaBearingTrueNorth, lang)}</p>
               </div>
               <div className="rounded-[22px] border border-primary/10 bg-white/80 p-4 text-center shadow-sm">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{lang === 'ar' ? 'المصدر' : 'Source'}</p>
-                <p className="mt-2 text-sm font-semibold text-primary">{support === 'generic-sensors' ? 'Sensors' : 'DeviceOrientation'}</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{t.source}</p>
+                <p className="mt-2 text-sm font-semibold text-primary">{support === 'generic-sensors' ? t.sensors : t.deviceOrientation}</p>
               </div>
               <div className="rounded-[22px] border border-primary/10 bg-white/80 p-4 text-center shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{t.qiblaAccuracy}</p>
                 <p className="mt-2 text-sm font-semibold text-primary">
                   {compassAccuracy != null
-                    ? `${lang === 'ar' ? toArabicNumerals(compassAccuracy.toFixed(0)) : compassAccuracy.toFixed(0)}°`
+                    ? `${formatLocalizedNumber(compassAccuracy.toFixed(0), lang)}°`
                     : t.qiblaHoldFlat}
                 </p>
               </div>
@@ -363,9 +363,9 @@ export default function QiblaCompass() {
 
             <div className="rounded-[24px] border border-primary/10 bg-white/70 px-4 py-3 text-center text-sm text-muted-foreground shadow-sm">
               <p>{t.qiblaHoldFlat}</p>
-              <p className="mt-1">Declination: {magneticDeclination.toFixed(1)}°</p>
+              <p className="mt-1">{t.declination}: {formatLocalizedNumber(magneticDeclination.toFixed(1), lang)}°</p>
               {compassAccuracy != null && compassAccuracy > 25 ? (
-                <p className="mt-2 font-medium text-amber-600">{t.qiblaAccuracyLow}</p>
+                <p className="mt-2 font-medium text-[#DCA15D]">{t.qiblaAccuracyLow}</p>
               ) : null}
             </div>
           </CardContent>

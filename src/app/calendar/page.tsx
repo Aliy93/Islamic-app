@@ -1,5 +1,5 @@
 'use client';
-import { useLanguage } from '@/context/language-context';
+import { isRtlLanguage, useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
 import { useState } from 'react';
 import HijriCalendar from '@/components/hijri-calendar';
@@ -22,7 +22,7 @@ export default function CalendarPage() {
   };
   
   return (
-    <div className="min-h-screen flex flex-col" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen flex flex-col" dir={isRtlLanguage(lang) ? 'rtl' : 'ltr'}>
       <header className="bg-background text-foreground p-4 flex items-center justify-between gap-4 sticky top-0 z-10">
         <h1 className="text-xl font-bold">{t.calendar}</h1>
       </header>

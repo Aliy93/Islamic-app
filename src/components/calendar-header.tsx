@@ -1,12 +1,11 @@
 'use client';
 
-import { format } from 'date-fns';
-import { arSA, enUS } from 'date-fns/locale';
 import { CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getHijriDate } from '@/lib/hijri';
 import { Language } from '@/context/language-context';
-import { toArabicNumerals } from '@/lib/utils';
+import { translations } from '@/lib/translations';
+import { formatLocalizedGregorianDate, formatLocalizedHijriMonth, formatLocalizedNumber } from '@/lib/localization';
 
 interface CalendarHeaderProps {
   onTodayClick: () => void;
@@ -17,6 +16,7 @@ export default function CalendarHeader({ onTodayClick, lang }: CalendarHeaderPro
   // Always use the current date
   const currentDate = new Date(); 
   const hijriDate = getHijriDate(currentDate);
+  const t = translations[lang];
 
   return (
     <div className="flex items-center justify-between">
@@ -24,17 +24,15 @@ export default function CalendarHeader({ onTodayClick, lang }: CalendarHeaderPro
         <CalendarDays className="w-8 h-8 text-primary" />
         <div>
           <p className="font-bold text-foreground">
-            {lang === 'ar'
-              ? `${toArabicNumerals(hijriDate.day)} ${hijriDate.monthNameAr} ${toArabicNumerals(hijriDate.year)} هـ`
-              : `${hijriDate.monthName} ${hijriDate.day}, ${hijriDate.year} H`}
+            {`${formatLocalizedNumber(hijriDate.day, lang)} ${formatLocalizedHijriMonth(currentDate, lang)} ${formatLocalizedNumber(hijriDate.year, lang)} ${t.hijriEra}`}
           </p>
           <p className="text-sm text-muted-foreground">
-            {format(currentDate, 'eeee, d MMMM yyyy', { locale: lang === 'ar' ? arSA : enUS })}
+            {formatLocalizedGregorianDate(currentDate, lang, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
       </div>
       <Button variant="outline" onClick={onTodayClick}>
-        {lang === 'ar' ? 'اليوم' : 'Today'}
+        {t.today}
       </Button>
     </div>
   );

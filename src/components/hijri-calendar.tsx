@@ -3,20 +3,20 @@
 
 import React from 'react';
 import {
-  format,
   isToday,
   add,
   sub,
 } from 'date-fns';
-import { arSA, enUS } from 'date-fns/locale';
+import { Language, usesEasternArabicNumerals } from '@/context/language-context';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getHijriDate, HijriDateInfo, getGregorianDateFromHijri } from '@/lib/hijri';
 import { getEventForDate, IslamicEvent } from '@/lib/islamic-events';
-import { cn, toArabicNumerals } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { Separator } from './ui/separator';
 import { useSettings } from '@/context/settings-context';
+import { formatLocalizedGregorianDate, formatLocalizedHijriMonth, formatLocalizedNumber, getLocalizedWeekdayShortNames } from '@/lib/localization';
 
 
 type CalendarDay = {
@@ -32,7 +32,7 @@ type HijriMonthState = {
 };
 
 interface HijriCalendarProps {
-    lang: 'en' | 'ar';
+    lang: Language;
     currentHijriDate: HijriMonthState;
   setCurrentHijriDate: (value: HijriMonthState | ((prev: HijriMonthState) => HijriMonthState)) => void;
 }
@@ -141,9 +141,7 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
     });
   }
 
-  const longWeekdays = lang === 'ar' 
-    ? ['سبت', 'أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة'] 
-    : ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const longWeekdays = React.useMemo(() => getLocalizedWeekdayShortNames(lang), [lang]);
     
   const firstCurrentMonthDay = calendarGrid.flat().find((day) => day.isCurrentMonth);
   const firstDayInGrid = calendarGrid[0]?.[0];
@@ -151,21 +149,18 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
 
   const getHijriHeader = () => {
       if (!firstCurrentMonthDay) return "";
-      const hijriInfo = firstCurrentMonthDay.hijri;
-      return lang === 'ar'
-          ? `${hijriInfo.monthNameAr} ${toArabicNumerals(hijriInfo.year)}`
-          : `${hijriInfo.monthName} ${hijriInfo.year}`;
+      return `${formatLocalizedHijriMonth(firstCurrentMonthDay.gregorian, lang)} ${formatLocalizedNumber(firstCurrentMonthDay.hijri.year, lang)}`;
   };
   
   const getGregorianHeader = () => {
       if (!firstDayInGrid || !lastDayInGrid) return "";
-      const startGrego = format(firstDayInGrid.gregorian, 'MMMM', { locale: lang === 'ar' ? arSA : enUS });
-      const endGrego = format(lastDayInGrid.gregorian, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : enUS });
-      const startYear = format(firstDayInGrid.gregorian, 'yyyy');
-      const endYear = format(lastDayInGrid.gregorian, 'yyyy');
+      const startGrego = formatLocalizedGregorianDate(firstDayInGrid.gregorian, lang, { month: 'long' });
+      const endGrego = formatLocalizedGregorianDate(lastDayInGrid.gregorian, lang, { month: 'long', year: 'numeric' });
+      const startYear = formatLocalizedGregorianDate(firstDayInGrid.gregorian, lang, { year: 'numeric' });
+      const endYear = formatLocalizedGregorianDate(lastDayInGrid.gregorian, lang, { year: 'numeric' });
       
       if (startYear !== endYear) {
-          return `${format(firstDayInGrid.gregorian, 'MMMM yyyy', { locale: lang === 'ar' ? arSA : enUS })} - ${endGrego}`;
+        return `${formatLocalizedGregorianDate(firstDayInGrid.gregorian, lang, { month: 'long', year: 'numeric' })} - ${endGrego}`;
       }
       if (startGrego === endGrego.split(' ')[0]) {
           return endGrego;
@@ -222,10 +217,10 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
                       'font-bold text-lg',
                       {'opacity-50': !day.isCurrentMonth}
                   )}>
-                    {lang === 'ar' ? toArabicNumerals(day.hijri.day) : day.hijri.day}
+                    {formatLocalizedNumber(day.hijri.day, lang)}
                   </span>
                  <span className="text-[10px] text-muted-foreground">
-                    {lang === 'ar' ? toArabicNumerals(format(day.gregorian, 'd')) : format(day.gregorian, 'd')}
+                    {formatLocalizedGregorianDate(day.gregorian, lang, { day: 'numeric' })}
                 </span>
                 </div>
                 {day.event && day.isCurrentMonth && (
@@ -243,19 +238,16 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
                     <div key={day.gregorian.toISOString()}>
                         <div className="flex items-center gap-4 w-full p-4">
                             <div className="text-center border-r-4 border-primary pr-4">
-                                <p className="text-3xl font-bold">{lang === 'ar' ? toArabicNumerals(day.hijri.day) : day.hijri.day}</p>
+                            <p className="text-3xl font-bold">{formatLocalizedNumber(day.hijri.day, lang)}</p>
                             </div>
                             <div className="flex-grow">
                                 <h3 className="font-bold text-foreground">{lang === 'ar' ? day.event!.nameAr : day.event!.name}</h3>
                                 <div className="flex justify-between items-center text-sm text-muted-foreground">
                                    <span>
-                                        {lang === 'ar' 
-                                            ? `${day.hijri.monthNameAr} ${toArabicNumerals(day.hijri.day)}, ${toArabicNumerals(day.hijri.year)}`
-                                            : `${day.hijri.day} ${day.hijri.monthName}, ${day.hijri.year}`
-                                        }
+                                {`${formatLocalizedHijriMonth(day.gregorian, lang)} ${formatLocalizedNumber(day.hijri.day, lang)}, ${formatLocalizedNumber(day.hijri.year, lang)}`}
                                     </span>
                                     <span>
-                                        {format(day.gregorian, 'd MMMM, yyyy', { locale: lang === 'ar' ? arSA : enUS })}
+                                {formatLocalizedGregorianDate(day.gregorian, lang, { day: 'numeric', month: 'long', year: 'numeric' })}
                                     </span>
                                 </div>
                             </div>

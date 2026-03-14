@@ -7,7 +7,8 @@ import { format, parse } from 'date-fns';
 import { useLanguage } from '@/context/language-context';
 import { useSettings } from '@/context/settings-context';
 import { translations } from '@/lib/translations';
-import { cn, toArabicNumerals } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { formatLocalizedTime } from '@/lib/localization';
 import { getPrayerSchedule, getPrayerTimes, PrayerTimesData } from '@/lib/prayer-times';
 
 type PrayerInfo = {
@@ -104,15 +105,10 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
   const prayerSchedule: PrayerInfo[] = (Object.keys(prayerIcons) as Array<keyof PrayerTimesData>).map(name => {
     const time24 = prayerScheduleData.find((prayer) => prayer.name === name)?.time ?? prayerTimes[name];
     const beginsTime = parse(time24, 'HH:mm', new Date());
-    let timeString = format(beginsTime, 'h:mm a');
-
-    if (lang === 'ar') {
-      timeString = toArabicNumerals(format(beginsTime, 'h:mm')) + (format(beginsTime, 'a') === 'AM' ? ' ص' : ' م');
-    }
 
     return {
       name,
-      begins: timeString,
+      begins: formatLocalizedTime(beginsTime, lang),
     }
   });
 
@@ -124,7 +120,7 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
           <li key={prayer.name} className={cn(
             "group flex items-center justify-between p-4 rounded-[20px] transition-all duration-300 relative overflow-hidden",
             isNext
-              ? 'premium-gradient text-white shadow-xl shadow-primary/20 scale-[1.02] border border-[#D4AF37]/30'
+              ? 'premium-gradient text-white shadow-xl shadow-primary/20 scale-[1.02] border border-[#DCA15D]/30'
               : 'bg-card border border-border/50 hover:border-primary/20'
           )}>
             {isNext && <div className="absolute inset-0 islamic-pattern opacity-5 pointer-events-none" />}
@@ -132,7 +128,7 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
             <div className="flex items-center gap-4 relative z-10">
               <div className={cn(
                 "p-2.5 rounded-xl transition-colors",
-                isNext ? 'bg-white/10 text-[#D4AF37] border border-white/10 shadow-inner' : 'bg-secondary/50 text-primary'
+                isNext ? 'bg-white/10 text-[#DCA15D] border border-white/10 shadow-inner' : 'bg-secondary/50 text-primary'
               )}>
                 {prayerIcons[prayer.name]}
               </div>
@@ -141,11 +137,11 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
                   "font-bold text-lg font-headline tracking-wide",
                   isNext ? 'text-white' : 'text-foreground'
                 )}>
-                  {lang === 'ar' ? t.prayers[prayer.name]?.arabic : prayer.name}
+                  {t.prayers[prayer.name]?.label}
                 </p>
                 <p className={cn(
                   "text-[10px] font-bold uppercase tracking-[0.1em]",
-                  isNext ? 'text-[#D4AF37]/80' : 'text-muted-foreground'
+                  isNext ? 'text-[#DCA15D]/80' : 'text-muted-foreground'
                 )}>
                   {t.prayers[prayer.name]?.begins}
                 </p>

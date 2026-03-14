@@ -4,67 +4,69 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* Pure white background */
-    --foreground: 145 30% 10%; /* Very dark green-black */
+    --background: 38 45% 98%;
+    --foreground: 146 50% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 145 30% 10%;
+    --card-foreground: 146 50% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 145 30% 10%;
+    --popover-foreground: 146 50% 13%;
 
-    --primary: 142 76% 36%; /* Premium Emerald Green */
-    --primary-foreground: 0 0% 100%;
+    --primary: 146 77% 19%;
+    --primary-foreground: 38 65% 96%;
 
-    --secondary: 142 20% 96%; /* Very soft green tint */
-    --secondary-foreground: 142 76% 36%;
+    --secondary: 38 70% 95%;
+    --secondary-foreground: 146 77% 19%;
 
-    --muted: 142 10% 90%;
-    --muted-foreground: 142 10% 40%;
+    --muted: 38 40% 92%;
+    --muted-foreground: 146 22% 35%;
 
-    --accent: 142 76% 95%;
-    --accent-foreground: 142 76% 36%;
+    --accent: 32 65% 61%;
+    --accent-foreground: 146 77% 19%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 142 20% 92%;
-    --input: 142 20% 92%;
-    --ring: 142 76% 36%;
+    --border: 35 38% 85%;
+    --input: 35 38% 85%;
+    --ring: 32 65% 61%;
 
-    --radius: 1.25rem; /* Larger radius for modern feel */
+    --radius: 1.25rem;
     
-    --gold: 45 60% 65%;
+    --gold: 32 65% 61%;
+    --brand-primary-rgb: 11 85 43;
+    --brand-accent-rgb: 220 161 93;
   }
 
   .dark {
-    --background: 145 30% 5%;
-    --foreground: 0 0% 100%;
+    --background: 146 32% 7%;
+    --foreground: 38 60% 94%;
 
-    --card: 145 30% 8%;
-    --card-foreground: 0 0% 100%;
+    --card: 146 28% 10%;
+    --card-foreground: 38 60% 94%;
 
-    --popover: 145 30% 8%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 146 28% 10%;
+    --popover-foreground: 38 60% 94%;
 
-    --primary: 142 76% 45%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 32 65% 61%;
+    --primary-foreground: 146 77% 19%;
 
-    --secondary: 142 30% 15%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 146 22% 17%;
+    --secondary-foreground: 38 60% 94%;
 
-    --muted: 142 30% 20%;
-    --muted-foreground: 142 10% 70%;
+    --muted: 146 18% 18%;
+    --muted-foreground: 38 28% 72%;
 
-    --accent: 142 76% 20%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 146 45% 24%;
+    --accent-foreground: 38 60% 94%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 142 30% 20%;
-    --input: 142 30% 20%;
-    --ring: 142 76% 55%;
+    --border: 146 18% 22%;
+    --input: 146 18% 22%;
+    --ring: 32 65% 61%;
   }
 }
 
@@ -83,9 +85,38 @@
 }
 
 .premium-gradient {
-  background: linear-gradient(135deg, #064E3B 0%, #065F46 100%);
+  background: linear-gradient(135deg, #0B552B 0%, #0F6A36 100%);
 }
 
 .islamic-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l5.878 18.09h19.021l-15.389 11.181 5.878 18.09-15.388-11.182-15.388 11.182 5.878-18.09L.101 18.09h19.021L30 0z' fill='%23D4AF37' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l5.878 18.09h19.021l-15.389 11.181 5.878 18.09-15.388-11.182-15.388 11.182 5.878-18.09L.101 18.09h19.021L30 0z' fill='%23DCA15D' fill-opacity='0.06' fill-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+.brand-page-gradient {
+  background:
+    radial-gradient(circle at top, rgba(11, 85, 43, 0.1), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(180deg, #fbf7f1 0%, #ffffff 48%, #f7f0e6 100%);
+}
+
+.brand-compass-shell {
+  background: radial-gradient(circle at center, rgba(11, 85, 43, 0.1) 0%, rgba(255, 255, 255, 0) 62%);
+}
+
+.brand-compass-core {
+  background: radial-gradient(circle at top, rgba(11, 85, 43, 0.08), rgba(255, 255, 255, 0) 72%);
+}
+
+.brand-card-surface {
+  background: linear-gradient(180deg, rgba(11, 85, 43, 0.08), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 24px 70px rgba(11, 85, 43, 0.12);
+}
+
+.brand-compass-center-shadow {
+  box-shadow: 0 0 0 8px rgba(11, 85, 43, 0.12);
+}
+
+.brand-aligned-ring {
+  border-color: rgba(220, 161, 93, 0.7);
+  background: rgba(220, 161, 93, 0.08);
+  box-shadow: 0 0 28px rgba(220, 161, 93, 0.24);
 }
