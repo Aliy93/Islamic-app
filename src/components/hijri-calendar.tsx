@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import React from 'react';
 import {
   format,
   isToday,
@@ -26,16 +26,21 @@ type CalendarDay = {
   event: IslamicEvent | undefined;
 };
 
+type HijriMonthState = {
+  year: number;
+  month: number;
+};
+
 interface HijriCalendarProps {
     lang: 'en' | 'ar';
-    currentHijriDate: { year: number; month: number; };
-  setCurrentHijriDate: React.Dispatch<React.SetStateAction<{ year: number; month: number }>>;
+    currentHijriDate: HijriMonthState;
+  setCurrentHijriDate: (value: HijriMonthState | ((prev: HijriMonthState) => HijriMonthState)) => void;
 }
 
 export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurrentHijriDate }: HijriCalendarProps) {
   const { hijriAdjustment } = useSettings();
 
-  const calendarGrid = useMemo((): CalendarDay[][] => {
+  const calendarGrid = React.useMemo((): CalendarDay[][] => {
     const { year, month } = currentHijriDate;
 
     // 1. Find the Gregorian date for the 1st of the current Hijri month
@@ -115,8 +120,10 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
     return weeks;
   }, [currentHijriDate, hijriAdjustment]);
 
-  const monthlyEvents = useMemo(() => {
-    const events = calendarGrid.flat().filter((day) => day.isCurrentMonth && day.event);
+  const monthlyEvents = React.useMemo(() => {
+    const events = calendarGrid.flat().filter(
+      (day): day is CalendarDay & { event: IslamicEvent } => day.isCurrentMonth && Boolean(day.event)
+    );
     events.sort((a, b) => a.hijri.day - b.hijri.day);
     return events;
   }, [calendarGrid]);
