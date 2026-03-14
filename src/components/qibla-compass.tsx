@@ -1,7 +1,7 @@
 'use client';
 
 import { useQibla } from '@/hooks/use-qibla';
-import { Language, useLanguage, usesEasternArabicNumerals } from '@/context/language-context';
+import { Language, useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

@@ -1,4 +1,5 @@
-'use client';
+"use client";
+
 import { useEffect, useMemo, useState } from 'react';
 import { getLanguageDefinition, Language, isRtlLanguage, supportedLanguages, useLanguage } from '@/context/language-context';
 import { useSettings } from '@/context/settings-context';
@@ -6,12 +7,12 @@ import { translations } from '@/lib/translations';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Globe, CalendarDays, BookOpen, MapPin } from 'lucide-react';
+import { Globe, CalendarDays, BookOpen, MapPin, Shield, Trash2 } from 'lucide-react';
 
 const prayerCalculationMethods = [
   { value: 1, name: 'ISNA (North America)' },
@@ -22,15 +23,19 @@ const prayerCalculationMethods = [
   { value: 7, name: 'Institute of Geophysics, University of Tehran' },
 ];
 
-
 export default function SettingsPage() {
   const { lang, setLang } = useLanguage();
-  const { 
-    prayerMethod, setPrayerMethod, 
-    hijriAdjustment, setHijriAdjustment,
-    location, setLocation,
-    isManualLocation, setIsManualLocation,
-    fetchAndSetLocation 
+  const {
+    prayerMethod,
+    setPrayerMethod,
+    hijriAdjustment,
+    setHijriAdjustment,
+    location,
+    setLocation,
+    isManualLocation,
+    setIsManualLocation,
+    fetchAndSetLocation,
+    clearStoredData,
   } = useSettings();
   const { toast } = useToast();
   const t = translations[lang];
@@ -73,12 +78,20 @@ export default function SettingsPage() {
     });
   };
 
+  const clearStoredAppData = () => {
+    clearStoredData();
+    toast({
+      title: t.privacyControls,
+      description: t.storedDataCleared,
+    });
+  };
+
   return (
     <div className="p-4 space-y-6" dir={isRtlLanguage(lang) ? 'rtl' : 'ltr'}>
-       <header className="bg-background text-foreground pb-4 flex items-center justify-between sticky top-0 z-10">
+      <header className="bg-background text-foreground pb-4 flex items-center justify-between sticky top-0 z-10">
         <h1 className="text-xl font-bold">{t.settings}</h1>
       </header>
-      
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -92,7 +105,9 @@ export default function SettingsPage() {
             <Label htmlFor="language-select" className="text-base">
               {t.currentLanguage}
             </Label>
-            <p className="text-sm text-muted-foreground">{currentLanguage.label} ({currentLanguage.nativeLabel})</p>
+            <p className="text-sm text-muted-foreground">
+              {currentLanguage.label} ({currentLanguage.nativeLabel})
+            </p>
           </div>
           <Select value={lang} onValueChange={(value) => setLang(value as Language)}>
             <SelectTrigger id="language-select">
@@ -115,7 +130,7 @@ export default function SettingsPage() {
             <MapPin className="w-5 h-5" />
             {t.location}
           </CardTitle>
-           <CardDescription>{t.locationDescription}</CardDescription>
+          <CardDescription>{t.locationDescription}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -128,6 +143,7 @@ export default function SettingsPage() {
               onCheckedChange={setIsManualLocation}
             />
           </div>
+
           {isManualLocation ? (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
@@ -155,15 +171,35 @@ export default function SettingsPage() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">{t.manualLocationHint}</p>
+              <p className="text-sm text-muted-foreground">{t.locationStoredRounded}</p>
               <Button onClick={saveManualLocation} className="w-full" disabled={!isManualLocationValid}>
                 {t.saveLocation}
               </Button>
             </div>
           ) : (
-            <Button onClick={fetchAndSetLocation} className="w-full">
-              {t.useCurrentLocation}
-            </Button>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">{t.locationStoredRounded}</p>
+              <Button onClick={fetchAndSetLocation} className="w-full">
+                {t.useCurrentLocation}
+              </Button>
+            </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            {t.privacyControls}
+          </CardTitle>
+          <CardDescription>{t.privacyDescription}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button variant="outline" onClick={clearStoredAppData} className="w-full">
+            <Trash2 className="w-4 h-4" />
+            {t.clearStoredData}
+          </Button>
         </CardContent>
       </Card>
 
@@ -173,26 +209,21 @@ export default function SettingsPage() {
             <BookOpen className="w-5 h-5" />
             {t.prayerCalculation}
           </CardTitle>
-          <CardDescription>
-            {t.prayerCalculationDescription}
-          </CardDescription>
+          <CardDescription>{t.prayerCalculationDescription}</CardDescription>
         </CardHeader>
         <CardContent>
-           <Select
-              value={String(prayerMethod)}
-              onValueChange={(value) => setPrayerMethod(Number(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a method" />
-              </SelectTrigger>
-              <SelectContent>
-                {prayerCalculationMethods.map(method => (
-                  <SelectItem key={method.value} value={String(method.value)}>
-                    {method.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <Select value={String(prayerMethod)} onValueChange={(value) => setPrayerMethod(Number(value))}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a method" />
+            </SelectTrigger>
+            <SelectContent>
+              {prayerCalculationMethods.map((method) => (
+                <SelectItem key={method.value} value={String(method.value)}>
+                  {method.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 
@@ -202,13 +233,11 @@ export default function SettingsPage() {
             <CalendarDays className="w-5 h-5" />
             {t.hijriAdjustment}
           </CardTitle>
-          <CardDescription>
-            {t.hijriAdjustmentDescription}
-          </CardDescription>
+          <CardDescription>{t.hijriAdjustmentDescription}</CardDescription>
         </CardHeader>
         <CardContent>
-          <RadioGroup 
-            value={String(hijriAdjustment)} 
+          <RadioGroup
+            value={String(hijriAdjustment)}
             onValueChange={(value) => setHijriAdjustment(Number(value))}
             className="flex items-center justify-around"
           >
@@ -227,7 +256,6 @@ export default function SettingsPage() {
           </RadioGroup>
         </CardContent>
       </Card>
-
     </div>
   );
 }

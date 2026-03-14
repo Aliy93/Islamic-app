@@ -1,4 +1,6 @@
 import { format, parse } from 'date-fns';
+import { z } from 'zod';
+import { parsePrayerTimesApiResponse } from '@/lib/external-data';
 
 export type LocationCoords = {
   latitude: number;
@@ -26,10 +28,31 @@ type CachedPrayerData = {
   date: string;
   location: LocationCoords;
   method: number;
+  cachedAt: number;
 };
 
 const PRAYER_CACHE_PREFIX = 'prayerData:';
 const PRIMARY_PRAYERS: PrayerName[] = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+const PRAYER_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const prayerTimeSchema = z.string().regex(/^\d{2}:\d{2}$/);
+const prayerTimesSchema = z.object({
+  Fajr: prayerTimeSchema,
+  Sunrise: prayerTimeSchema,
+  Dhuhr: prayerTimeSchema,
+  Asr: prayerTimeSchema,
+  Maghrib: prayerTimeSchema,
+  Isha: prayerTimeSchema,
+});
+const cachedPrayerDataSchema = z.object({
+  timings: prayerTimesSchema,
+  date: z.string(),
+  location: z.object({
+    latitude: z.number().finite(),
+    longitude: z.number().finite(),
+  }),
+  method: z.number(),
+  cachedAt: z.number().int().nonnegative(),
+});
 
 function normalizeCoordinate(value: number): string {
   return value.toFixed(4);
@@ -37,6 +60,24 @@ function normalizeCoordinate(value: number): string {
 
 function sanitizePrayerTime(time: string): string {
   return time.split(' ')[0].trim();
+}
+
+function normalizePrayerTimes(timings: PrayerTimesData, fetchErrorMessage: string): PrayerTimesData {
+  const sanitized = {
+    Fajr: sanitizePrayerTime(timings.Fajr),
+    Sunrise: sanitizePrayerTime(timings.Sunrise),
+    Dhuhr: sanitizePrayerTime(timings.Dhuhr),
+    Asr: sanitizePrayerTime(timings.Asr),
+    Maghrib: sanitizePrayerTime(timings.Maghrib),
+    Isha: sanitizePrayerTime(timings.Isha),
+  };
+
+  const result = prayerTimesSchema.safeParse(sanitized);
+  if (!result.success) {
+    throw new Error(fetchErrorMessage);
+  }
+
+  return result.data;
 }
 
 function buildPrayerCacheKey(date: Date, location: LocationCoords, method: number): string {
@@ -51,7 +92,18 @@ function readPrayerCache(key: string): CachedPrayerData | null {
   if (!cachedData) return null;
 
   try {
-    return JSON.parse(cachedData) as CachedPrayerData;
+    const parsed = cachedPrayerDataSchema.safeParse(JSON.parse(cachedData));
+    if (!parsed.success) {
+      window.localStorage.removeItem(key);
+      return null;
+    }
+
+    if (Date.now() - parsed.data.cachedAt > PRAYER_CACHE_TTL_MS) {
+      window.localStorage.removeItem(key);
+      return null;
+    }
+
+    return parsed.data;
   } catch {
     window.localStorage.removeItem(key);
     return null;
@@ -79,7 +131,11 @@ export async function getPrayerTimes(params: {
 
   const timestamp = Math.floor(date.getTime() / 1000);
   const response = await fetch(
-    `https://api.aladhan.com/v1/timings/${timestamp}?latitude=${location.latitude}&longitude=${location.longitude}&method=${method}`
+    `https://api.aladhan.com/v1/timings/${timestamp}?latitude=${location.latitude}&longitude=${location.longitude}&method=${method}`,
+    {
+      cache: 'no-store',
+      referrerPolicy: 'no-referrer',
+    }
   );
 
   if (!response.ok) {
@@ -87,19 +143,15 @@ export async function getPrayerTimes(params: {
   }
 
   const data = await response.json();
-  if (data.code !== 200 || !data.data?.timings) {
-    throw new Error(data.data || fetchErrorMessage);
-  }
-
-  const timings = Object.fromEntries(
-    Object.entries(data.data.timings).map(([name, time]) => [name, sanitizePrayerTime(String(time))])
-  ) as PrayerTimesData;
+  const rawTimings = parsePrayerTimesApiResponse(data);
+  const timings = normalizePrayerTimes(rawTimings, fetchErrorMessage);
 
   writePrayerCache(cacheKey, {
     timings,
     date: format(date, 'yyyy-MM-dd'),
     location,
     method,
+    cachedAt: Date.now(),
   });
 
   return timings;

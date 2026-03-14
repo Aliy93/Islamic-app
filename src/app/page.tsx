@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { isRtlLanguage, useLanguage, usesEasternArabicNumerals } from '@/context/language-context';
+import { isRtlLanguage, useLanguage } from '@/context/language-context';
 import { useSettings } from '@/context/settings-context';
 import { translations } from '@/lib/translations';
 import { getHijriDate, HijriDateInfo } from '@/lib/hijri';
-import { format, parse, addDays, differenceInSeconds } from 'date-fns';
+import { parse, addDays, differenceInSeconds } from 'date-fns';
 import { ChevronLeft, ChevronRight, MapPin, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PrayerTimes from '@/components/prayer-times';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { formatLocalizedGregorianDate, formatLocalizedHijriMonth, formatLocalizedNumber } from '@/lib/localization';
 import { findNextPrayer, getPrayerSchedule, getPrayerTimes, PrayerName, PrayerTimesData } from '@/lib/prayer-times';
+import { parseReverseGeocodeLabel } from '@/lib/external-data';
 
 type Prayer = {
   name: PrayerName;
@@ -40,17 +41,21 @@ export default function Home() {
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimesData | null>(null);
 
   useEffect(() => {
+    // Hydration gate for time-sensitive client-only content.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (mounted) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHijriDate(getHijriDate(currentDate));
     }
   }, [currentDate, mounted]);
 
   useEffect(() => {
     if (locationError) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(locationError);
     }
   }, [locationError]);
@@ -62,19 +67,17 @@ export default function Home() {
     const fetchLocationName = async () => {
       try {
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${location.latitude}&lon=${location.longitude}`
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${location.latitude}&lon=${location.longitude}`,
+          {
+            cache: 'no-store',
+            referrerPolicy: 'no-referrer',
+          }
         );
-        const data = await response.json();
-        const address = data.address;
-        const city = address.city || address.town || address.village || address.suburb || address.state_district;
-        const country = address.country;
+        if (!response.ok) return;
 
-        if (city && country) {
-          setLocationName(`${city}, ${country}`);
-        } else if (country) {
-          setLocationName(country);
-        }
-      } catch (err) {
+        const data = await response.json();
+        setLocationName(parseReverseGeocodeLabel(data));
+      } catch {
         // Silently fail and fallback to translations
       }
     };

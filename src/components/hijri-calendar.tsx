@@ -7,7 +7,7 @@ import {
   add,
   sub,
 } from 'date-fns';
-import { Language, usesEasternArabicNumerals } from '@/context/language-context';
+import { Language } from '@/context/language-context';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getHijriDate, HijriDateInfo, getGregorianDateFromHijri } from '@/lib/hijri';

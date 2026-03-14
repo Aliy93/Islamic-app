@@ -46,6 +46,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
     if (isSupportedLanguage(savedLanguage)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLang(savedLanguage);
     }
   }, []);

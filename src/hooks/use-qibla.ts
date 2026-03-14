@@ -50,6 +50,7 @@ export function useQibla() {
   const [isCompassActive, setIsCompassActive] = useState(false);
   const [needsCalibration, setNeedsCalibration] = useState(false);
   const [compassAccuracy, setCompassAccuracy] = useState<number | null>(null);
+  const [isPageVisible, setIsPageVisible] = useState(true);
 
   const fallbackSupportRef = useRef<CompassSupport>('none');
 
@@ -94,6 +95,8 @@ export function useQibla() {
 
     // On phones, prefer the browser-normalized orientation APIs first.
     fallbackSupportRef.current = hasDO && hasGeneric ? 'generic-sensors' : 'none';
+    // This effect initializes capability state from browser APIs during mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSupport(hasDO ? 'deviceorientation' : hasGeneric ? 'generic-sensors' : 'none');
 
     // On most browsers, there is no explicit permission prompt for orientation.
@@ -128,13 +131,35 @@ export function useQibla() {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const updateVisibility = () => {
+      const visible = document.visibilityState === 'visible';
+      setIsPageVisible(visible);
+      if (!visible) {
+        setIsCompassActive(false);
+      }
+    };
+
+    updateVisibility();
+    document.addEventListener('visibilitychange', updateVisibility);
+
+    return () => {
+      document.removeEventListener('visibilitychange', updateVisibility);
+    };
+  }, []);
+
   // Start live compass when permission granted
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (permissionState !== 'granted') return;
     if (support === 'none') return;
+    if (!isPageVisible) return;
 
     let cancelled = false;
+    // Reset live sensor state when starting or restarting listeners.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsCompassActive(false);
     setCompassAccuracy(null);
 
@@ -293,7 +318,7 @@ export function useQibla() {
         try { fn(); } catch {}
       });
     };
-  }, [permissionState, support, setHeading]);
+  }, [isPageVisible, permissionState, support, setHeading]);
 
   return {
     qiblaBearingTrueNorth,

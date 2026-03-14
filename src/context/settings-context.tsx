@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { locationSchema, normalizeLocation, parseStoredLocation, StoredLocation } from '@/lib/location';
 
 // Default to Muslim World League, a common choice
 const DEFAULT_PRAYER_METHOD = 2; 
@@ -13,6 +14,8 @@ type Location = {
   longitude: number;
 };
 
+const settingsNumberSchema = locationSchema.shape.latitude;
+
 interface SettingsContextType {
   prayerMethod: number;
   setPrayerMethod: (method: number) => void;
@@ -23,6 +26,7 @@ interface SettingsContextType {
   isManualLocation: boolean;
   setIsManualLocation: (isManual: boolean) => void;
   fetchAndSetLocation: () => void;
+  clearStoredData: () => void;
   locationError: string | null;
 }
 
@@ -42,17 +46,24 @@ function clearPrayerCache() {
   keysToRemove.forEach((key) => window.localStorage.removeItem(key));
 }
 
+function readStoredNumber(key: string, fallback: number): number {
+  if (typeof window === 'undefined') return fallback;
+
+  const rawValue = window.localStorage.getItem(key);
+  if (!rawValue) return fallback;
+
+  const parsed = Number(rawValue);
+  return settingsNumberSchema.safeParse(parsed).success ? parsed : fallback;
+}
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [prayerMethod, setPrayerMethodState] = useState<number>(() => {
-    if (typeof window === 'undefined') return DEFAULT_PRAYER_METHOD;
-    const savedMethod = window.localStorage.getItem('prayerMethod');
-    return savedMethod ? Number(savedMethod) : DEFAULT_PRAYER_METHOD;
+    return readStoredNumber('prayerMethod', DEFAULT_PRAYER_METHOD);
   });
 
   const [hijriAdjustment, setHijriAdjustmentState] = useState<number>(() => {
-    if (typeof window === 'undefined') return DEFAULT_HIJRI_ADJUSTMENT;
-    const savedAdjustment = window.localStorage.getItem('hijriAdjustment');
-    return savedAdjustment ? Number(savedAdjustment) : DEFAULT_HIJRI_ADJUSTMENT;
+    const value = readStoredNumber('hijriAdjustment', DEFAULT_HIJRI_ADJUSTMENT);
+    return value >= -1 && value <= 1 ? value : DEFAULT_HIJRI_ADJUSTMENT;
   });
 
   const [isManualLocation, setIsManualLocationState] = useState<boolean>(() => {
@@ -63,8 +74,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const [location, setLocationState] = useState<Location | null>(() => {
     if (typeof window === 'undefined') return null;
-    const savedLocation = window.localStorage.getItem('location');
-    return savedLocation ? (JSON.parse(savedLocation) as Location) : null;
+    return parseStoredLocation(window.localStorage.getItem('location'));
   });
 
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -74,13 +84,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     // Sync persisted settings after hydration.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPrayerMethodState(() => {
-      const savedMethod = window.localStorage.getItem('prayerMethod');
-      return savedMethod ? Number(savedMethod) : DEFAULT_PRAYER_METHOD;
+      return readStoredNumber('prayerMethod', DEFAULT_PRAYER_METHOD);
     });
 
     setHijriAdjustmentState(() => {
-      const savedAdjustment = window.localStorage.getItem('hijriAdjustment');
-      return savedAdjustment ? Number(savedAdjustment) : DEFAULT_HIJRI_ADJUSTMENT;
+      const value = readStoredNumber('hijriAdjustment', DEFAULT_HIJRI_ADJUSTMENT);
+      return value >= -1 && value <= 1 ? value : DEFAULT_HIJRI_ADJUSTMENT;
     });
 
     setIsManualLocationState(() => {
@@ -88,15 +97,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       return savedIsManual === 'true';
     });
 
-    const savedLocation = window.localStorage.getItem('location');
-    if (savedLocation) {
-      setLocationState(JSON.parse(savedLocation) as Location);
-    }
+    const savedLocation = parseStoredLocation(window.localStorage.getItem('location'));
+    setLocationState(savedLocation);
   }, []);
 
   const setLocation = (newLocation: Location) => {
-    localStorage.setItem('location', JSON.stringify(newLocation));
-    setLocationState(newLocation);
+    const normalizedLocation = normalizeLocation(locationSchema.parse(newLocation) as StoredLocation);
+    localStorage.setItem('location', JSON.stringify(normalizedLocation));
+    setLocationState(normalizedLocation);
     clearPrayerCache();
   }
 
@@ -156,6 +164,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const clearStoredData = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    window.localStorage.removeItem('location');
+    window.localStorage.removeItem('prayerMethod');
+    window.localStorage.removeItem('hijriAdjustment');
+    window.localStorage.removeItem('isManualLocation');
+    clearPrayerCache();
+
+    setPrayerMethodState(DEFAULT_PRAYER_METHOD);
+    setHijriAdjustmentState(DEFAULT_HIJRI_ADJUSTMENT);
+    setIsManualLocationState(true);
+    setLocationState(null);
+    setLocationError(null);
+  }, []);
+
 
   return (
     <SettingsContext.Provider value={{ 
@@ -164,6 +188,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       location, setLocation,
       isManualLocation, setIsManualLocation,
       fetchAndSetLocation,
+      clearStoredData,
       locationError
     }}>
       {children}

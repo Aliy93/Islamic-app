@@ -1,7 +1,7 @@
 
 export const translations = {
   en: {
-    title: "Muslim App",
+    title: "Halal Lifestyle",
     qibla: "Qibla",
     prayer: "Prayer",
     calendar: "Calendar",
@@ -89,11 +89,16 @@ export const translations = {
     source: "Source",
     declination: "Declination",
     sensors: "Sensors",
-    deviceOrientation: "Device Orientation"
+    deviceOrientation: "Device Orientation",
+    privacyControls: "Privacy Controls",
+    privacyDescription: "Manage stored location and cached app data on this device.",
+    clearStoredData: "Clear Stored Location and Cache",
+    storedDataCleared: "Stored location and cached prayer data cleared.",
+    locationStoredRounded: "Location is stored with reduced precision to limit exposure on this device."
 
   },
   ar: {
-    title: "تطبيق مسلم",
+    title: "حياة حلال",
     qibla: "القبلة",
     prayer: "الصلاة",
     calendar: "التقويم",
@@ -181,10 +186,15 @@ export const translations = {
     source: "المصدر",
     declination: "الانحراف",
     sensors: "المستشعرات",
-    deviceOrientation: "اتجاه الجهاز"
+    deviceOrientation: "اتجاه الجهاز",
+    privacyControls: "عناصر التحكم في الخصوصية",
+    privacyDescription: "أدِر الموقع المخزن وبيانات التطبيق المؤقتة على هذا الجهاز.",
+    clearStoredData: "مسح الموقع المخزن والذاكرة المؤقتة",
+    storedDataCleared: "تم مسح الموقع المخزن وبيانات أوقات الصلاة المؤقتة.",
+    locationStoredRounded: "يتم تخزين الموقع بدقة أقل لتقليل التعرض على هذا الجهاز."
   },
   am: {
-    title: "ሙስሊም መተግበሪያ",
+    title: "Halal Lifestyle",
     qibla: "ቂብላ",
     prayer: "ሶላት",
     calendar: "የቀን መቁጠሪያ",
@@ -270,10 +280,15 @@ export const translations = {
     source: "ምንጭ",
     declination: "ዲክሊኔሽን",
     sensors: "ሴንሰሮች",
-    deviceOrientation: "የመሣሪያ አቅጣጫ"
+    deviceOrientation: "የመሣሪያ አቅጣጫ",
+    privacyControls: "የግላዊነት መቆጣጠሪያዎች",
+    privacyDescription: "በዚህ መሣሪያ ላይ የተቀመጠ አካባቢ እና የመተግበሪያ ካሽ ያስተዳድሩ።",
+    clearStoredData: "የተቀመጠ አካባቢ እና ካሽ አጥፋ",
+    storedDataCleared: "የተቀመጠ አካባቢ እና የሶላት ጊዜ ካሽ ተጠርጓል።",
+    locationStoredRounded: "በዚህ መሣሪያ ላይ ተጋላጭነትን ለመቀነስ አካባቢው በተቀነሰ ትክክለኛነት ይቀመጣል።"
   },
   om: {
-    title: "Appii Muslimaa",
+    title: "Halal Lifestyle",
     qibla: "Qiblaa",
     prayer: "Salaata",
     calendar: "Kaalaandarii",
@@ -359,6 +374,11 @@ export const translations = {
     source: "Madda",
     declination: "Dikilineshinii",
     sensors: "Sensoroota",
-    deviceOrientation: "Kallattii meeshaa"
+    deviceOrientation: "Kallattii meeshaa",
+    privacyControls: "To'annoo dhuunfaa",
+    privacyDescription: "Bakka kuufame fi deetaa kaashii appii meeshaa kana irratti to'adhaa.",
+    clearStoredData: "Bakka Kuufamee fi Kaashii Haqi",
+    storedDataCleared: "Bakkan kuufame fi kaashiin yeroo salaataa haqameera.",
+    locationStoredRounded: "Saaxilamummaa meeshaa kana irratti hir'isuuf bakki sirrummaa xiqqeessuun kuufama."
   }
 } as const;

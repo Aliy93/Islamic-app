@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Sun, Sunrise, Sunset, Moon, CloudSun } from 'lucide-react';
-import { format, parse } from 'date-fns';
+import { parse } from 'date-fns';
 import { useLanguage } from '@/context/language-context';
 import { useSettings } from '@/context/settings-context';
 import { translations } from '@/lib/translations';

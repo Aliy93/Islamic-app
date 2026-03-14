@@ -44,6 +44,8 @@ export function calculateQibla(lat: number, lon: number): number {
  * @returns An estimated magnetic declination in degrees.
  */
 export function getMagneticDeclination(lat: number, lon: number): number {
+  void lat;
+  void lon;
   // Fallback to 0 to ensure the app builds and runs in the browser.
   // In a production app, you might use a browser-safe library or a small lookup table.
   return 0;

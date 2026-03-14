@@ -28,8 +28,11 @@ const notoSansEthiopic = Noto_Sans_Ethiopic({
 });
 
 export const metadata: Metadata = {
-  title: 'Muslim App',
+  title: 'Halal Lifestyle',
   description: 'Gregorian-Hijri Calendar with Islamic Events',
+  icons: {
+    icon: '/halal-logo.png'
+  }
 };
 
 export default function RootLayout({
