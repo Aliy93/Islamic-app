@@ -9,7 +9,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Compass, RotateCw, Zap, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettings } from '@/context/settings-context';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { formatLocalizedNumber } from '@/lib/localization';
 
 // Kaaba SVG Icon
@@ -222,6 +222,39 @@ export default function QiblaCompass() {
     ? t.qiblaAligned
     : `${signedTurnAngle > 0 ? t.qiblaTurnRight : t.qiblaTurnLeft} ${formatBearing(Math.abs(signedTurnAngle), lang)}`;
   const topLabel = t.phoneTop;
+
+  const wasAlignedRef = useRef(false);
+  const lastVibrateMsRef = useRef(0);
+
+  useEffect(() => {
+    // Only vibrate for live compass mode.
+    if (permissionState !== 'granted' || !isSupported || !isCompassActive) {
+      wasAlignedRef.current = false;
+      return;
+    }
+
+    // Vibrate only when entering the aligned zone.
+    if (isAligned && !wasAlignedRef.current) {
+      const now = Date.now();
+      const cooldownMs = 1500;
+      if (now - lastVibrateMsRef.current >= cooldownMs) {
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+          try {
+            navigator.vibrate(40);
+          } catch {
+            // ignore
+          }
+        }
+        lastVibrateMsRef.current = now;
+      }
+      wasAlignedRef.current = true;
+      return;
+    }
+
+    if (!isAligned) {
+      wasAlignedRef.current = false;
+    }
+  }, [isAligned, isCompassActive, isSupported, permissionState]);
 
   useEffect(() => {
     if (!location && !locationError) {
