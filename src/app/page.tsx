@@ -42,20 +42,17 @@ export default function Home() {
 
   useEffect(() => {
     // Hydration gate for time-sensitive client-only content.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (mounted) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHijriDate(getHijriDate(currentDate));
     }
   }, [currentDate, mounted]);
 
   useEffect(() => {
     if (locationError) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(locationError);
     }
   }, [locationError]);

@@ -27,6 +27,10 @@ function isSupportedLanguage(value: string | null): value is Language {
 }
 
 function readLanguageCookie(): Language | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
   const cookieEntry = document.cookie
     .split('; ')
     .find((entry) => entry.startsWith(`${LANGUAGE_COOKIE_KEY}=`));
@@ -55,23 +59,21 @@ export function getLanguageDefinition(lang: Language) {
   return supportedLanguages.find((language) => language.value === lang) ?? supportedLanguages[0];
 }
 
+function getInitialLanguage(): Language {
+  if (typeof window === 'undefined') {
+    return 'en';
+  }
+
+  const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  if (isSupportedLanguage(savedLanguage)) {
+    return savedLanguage;
+  }
+
+  return readLanguageCookie() ?? 'en';
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLang] = useState<Language>('en');
-
-  useEffect(() => {
-    const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    if (isSupportedLanguage(savedLanguage)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLang(savedLanguage);
-      return;
-    }
-
-    const cookieLanguage = readLanguageCookie();
-    if (cookieLanguage) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLang(cookieLanguage);
-    }
-  }, []);
+  const [lang, setLang] = useState<Language>(getInitialLanguage);
 
   useEffect(() => {
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
