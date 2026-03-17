@@ -73,11 +73,11 @@ export function getSecurityHeaders(isDev: boolean) {
       value: 'DENY',
     },
 
-    // 🔒 Permissions (fully restricted)
+    // Allow only this origin to use the browser/device APIs the app depends on.
     {
       key: 'Permissions-Policy',
       value:
-        'geolocation=(), camera=(), microphone=(), accelerometer=(), gyroscope=(), magnetometer=()',
+        'geolocation=(self), camera=(), microphone=(), accelerometer=(self), gyroscope=(self), magnetometer=(self)',
     },
 
     // 🔒 Cross-Origin Isolation (modern protection)

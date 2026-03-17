@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { isRtlLanguage, useLanguage } from '@/context/language-context';
 import { useSettings } from '@/context/settings-context';
@@ -27,7 +28,7 @@ const IslamicCorner = ({ className }: { className?: string }) => (
 
 export default function Home() {
   const { lang } = useLanguage();
-  const { prayerMethod, location, locationError } = useSettings();
+  const { prayerMethod, location, locationError, fetchAndSetLocation, setIsManualLocation } = useSettings();
   const t = translations[lang];
 
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -224,7 +225,21 @@ export default function Home() {
       {error && (
         <Alert variant="destructive" className="rounded-2xl border-destructive/20 shadow-sm">
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            <p>{error}</p>
+            {!location && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={fetchAndSetLocation}>
+                  {t.useCurrentLocation}
+                </Button>
+                <Button type="button" asChild>
+                  <Link href="/settings" onClick={() => setIsManualLocation(true)}>
+                    {t.manualLocation}
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 

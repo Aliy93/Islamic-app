@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { locationSchema, normalizeLocation, parseStoredLocation, StoredLocation } from '@/lib/location';
 
@@ -13,6 +13,8 @@ type Location = {
   latitude: number;
   longitude: number;
 };
+
+type LocationPermissionState = PermissionState | 'unknown' | 'unsupported';
 
 const settingsNumberSchema = locationSchema.shape.latitude;
 
@@ -28,6 +30,7 @@ interface SettingsContextType {
   fetchAndSetLocation: () => void;
   clearStoredData: () => void;
   locationError: string | null;
+  locationPermissionState: LocationPermissionState;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -56,6 +59,19 @@ function readStoredNumber(key: string, fallback: number): number {
   return settingsNumberSchema.safeParse(parsed).success ? parsed : fallback;
 }
 
+function getGeolocationErrorMessage(error: GeolocationPositionError) {
+  switch (error.code) {
+    case error.PERMISSION_DENIED:
+      return 'Location access was denied. Enable location permission in your browser settings or set it manually.';
+    case error.POSITION_UNAVAILABLE:
+      return 'Your location is currently unavailable. Check device location services and try again.';
+    case error.TIMEOUT:
+      return 'Location request timed out. Try again or set your location manually.';
+    default:
+      return 'Could not get location. Please enable location services.';
+  }
+}
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [prayerMethod, setPrayerMethodState] = useState<number>(() => {
     return readStoredNumber('prayerMethod', DEFAULT_PRAYER_METHOD);
@@ -78,6 +94,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   });
 
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationPermissionState, setLocationPermissionState] = useState<LocationPermissionState>('unknown');
+  const autoSwitchedToManualRef = useRef(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -105,6 +123,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const normalizedLocation = normalizeLocation(locationSchema.parse(newLocation) as StoredLocation);
     localStorage.setItem('location', JSON.stringify(normalizedLocation));
     setLocationState(normalizedLocation);
+    setLocationError(null);
     clearPrayerCache();
   }
 
@@ -119,13 +138,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           setLocation(newLocation);
           setLocationError(null);
         },
-        () => {
-          setLocationError("Could not get location. Please enable location services.");
+        (error) => {
+          const message = getGeolocationErrorMessage(error);
+          if (error.code === error.PERMISSION_DENIED) {
+            setLocationPermissionState('denied');
+            localStorage.setItem('isManualLocation', 'true');
+            setIsManualLocationState(true);
+            autoSwitchedToManualRef.current = true;
+          }
+          setLocationError(message);
           toast({
             variant: "destructive",
             title: "Location Error",
-            description: "Could not get location. Please enable location services or set it manually.",
+            description: message,
           });
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 300000,
         }
       );
     } else {
@@ -137,6 +168,59 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       });
     }
   }, [toast]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (!('permissions' in navigator) || !navigator.permissions?.query) {
+      setLocationPermissionState('unsupported');
+      return;
+    }
+
+    let isMounted = true;
+    let permissionStatus: PermissionStatus | null = null;
+
+    const syncPermissionState = (state: PermissionState) => {
+      if (!isMounted) return;
+
+      setLocationPermissionState(state);
+
+      if (state === 'granted') {
+        setLocationError(null);
+
+        if (autoSwitchedToManualRef.current) {
+          localStorage.setItem('isManualLocation', 'false');
+          setIsManualLocationState(false);
+          autoSwitchedToManualRef.current = false;
+        }
+
+        if (!location) {
+          fetchAndSetLocation();
+        }
+      }
+    };
+
+    const watchPermission = async () => {
+      try {
+        permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+        syncPermissionState(permissionStatus.state);
+        permissionStatus.onchange = () => syncPermissionState(permissionStatus?.state ?? 'prompt');
+      } catch {
+        if (isMounted) {
+          setLocationPermissionState('unsupported');
+        }
+      }
+    };
+
+    void watchPermission();
+
+    return () => {
+      isMounted = false;
+      if (permissionStatus) {
+        permissionStatus.onchange = null;
+      }
+    };
+  }, [fetchAndSetLocation, location]);
 
   useEffect(() => {
     if (!location && !isManualLocation) {
@@ -159,6 +243,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const setIsManualLocation = (isManual: boolean) => {
     localStorage.setItem('isManualLocation', String(isManual));
     setIsManualLocationState(isManual);
+    autoSwitchedToManualRef.current = false;
     if (!isManual) {
       fetchAndSetLocation(); // Fetch GPS location when switching to automatic
     }
@@ -178,6 +263,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setIsManualLocationState(true);
     setLocationState(null);
     setLocationError(null);
+    setLocationPermissionState('unknown');
+    autoSwitchedToManualRef.current = false;
   }, []);
 
 
@@ -189,7 +276,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       isManualLocation, setIsManualLocation,
       fetchAndSetLocation,
       clearStoredData,
-      locationError
+      locationError,
+      locationPermissionState
     }}>
       {children}
     </SettingsContext.Provider>
