@@ -1,6 +1,5 @@
 import { format, parse } from 'date-fns';
 import { z } from 'zod';
-import { parsePrayerTimesApiResponse } from '@/lib/external-data';
 
 export type LocationCoords = {
   latitude: number;
@@ -131,10 +130,9 @@ export async function getPrayerTimes(params: {
 
   const timestamp = Math.floor(date.getTime() / 1000);
   const response = await fetch(
-    `https://api.aladhan.com/v1/timings/${timestamp}?latitude=${location.latitude}&longitude=${location.longitude}&method=${method}`,
+    `/api/prayer-times?timestamp=${timestamp}&latitude=${location.latitude}&longitude=${location.longitude}&method=${method}`,
     {
       cache: 'no-store',
-      referrerPolicy: 'no-referrer',
     }
   );
 
@@ -143,7 +141,7 @@ export async function getPrayerTimes(params: {
   }
 
   const data = await response.json();
-  const rawTimings = parsePrayerTimesApiResponse(data);
+  const rawTimings = prayerTimesSchema.parse(data.timings);
   const timings = normalizePrayerTimes(rawTimings, fetchErrorMessage);
 
   writePrayerCache(cacheKey, {

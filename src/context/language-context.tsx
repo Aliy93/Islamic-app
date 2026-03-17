@@ -2,6 +2,9 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
+const LANGUAGE_STORAGE_KEY = 'language';
+const LANGUAGE_COOKIE_KEY = 'language';
+
 export const supportedLanguages = [
   { value: 'en', label: 'English', nativeLabel: 'English', dir: 'ltr', locale: 'en-US' },
   { value: 'ar', label: 'Arabic', nativeLabel: 'العربية', dir: 'rtl', locale: 'ar' },
@@ -18,10 +21,22 @@ interface LanguageContextType {
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
-const LANGUAGE_STORAGE_KEY = 'language';
 
 function isSupportedLanguage(value: string | null): value is Language {
   return supportedLanguages.some((language) => language.value === value);
+}
+
+function readLanguageCookie(): Language | null {
+  const cookieEntry = document.cookie
+    .split('; ')
+    .find((entry) => entry.startsWith(`${LANGUAGE_COOKIE_KEY}=`));
+
+  if (!cookieEntry) {
+    return null;
+  }
+
+  const value = decodeURIComponent(cookieEntry.split('=')[1] ?? '');
+  return isSupportedLanguage(value) ? value : null;
 }
 
 export function isRtlLanguage(lang: Language): boolean {
@@ -48,11 +63,19 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (isSupportedLanguage(savedLanguage)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLang(savedLanguage);
+      return;
+    }
+
+    const cookieLanguage = readLanguageCookie();
+    if (cookieLanguage) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLang(cookieLanguage);
     }
   }, []);
 
   useEffect(() => {
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+    document.cookie = `${LANGUAGE_COOKIE_KEY}=${encodeURIComponent(lang)}; path=/; max-age=31536000; samesite=lax`;
     document.documentElement.lang = getLocaleTag(lang);
     document.documentElement.dir = isRtlLanguage(lang) ? 'rtl' : 'ltr';
   }, [lang]);

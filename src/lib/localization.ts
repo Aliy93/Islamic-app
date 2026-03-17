@@ -1,5 +1,8 @@
 import { getLocaleTag, Language, usesEasternArabicNumerals } from '@/context/language-context';
+import { getGregorianDateFromHijri } from '@/lib/hijri';
 import { toArabicNumerals } from '@/lib/utils';
+
+const REFERENCE_HIJRI_YEAR = 1447;
 
 function withFallback<T>(factory: () => T, fallback: () => T): T {
   try {
@@ -33,6 +36,12 @@ export function formatLocalizedHijriMonth(date: Date, lang: Language): string {
     () => new Intl.DateTimeFormat(`${getLocaleTag(lang)}-u-ca-islamic-umalqura`, { month: 'long' }).format(date),
     () => new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { month: 'long' }).format(date)
   );
+}
+
+export function formatLocalizedHijriMonthByNumber(month: number, lang: Language): string {
+  const normalizedMonth = Math.min(Math.max(month, 1), 12);
+  const referenceDate = getGregorianDateFromHijri(REFERENCE_HIJRI_YEAR, normalizedMonth, 1);
+  return formatLocalizedHijriMonth(referenceDate, lang);
 }
 
 export function getLocalizedWeekdayShortNames(lang: Language): string[] {

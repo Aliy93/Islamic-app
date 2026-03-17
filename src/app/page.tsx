@@ -12,7 +12,6 @@ import PrayerTimes from '@/components/prayer-times';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { formatLocalizedGregorianDate, formatLocalizedHijriMonth, formatLocalizedNumber } from '@/lib/localization';
 import { findNextPrayer, getPrayerSchedule, getPrayerTimes, PrayerName, PrayerTimesData } from '@/lib/prayer-times';
-import { parseReverseGeocodeLabel } from '@/lib/external-data';
 
 type Prayer = {
   name: PrayerName;
@@ -64,25 +63,33 @@ export default function Home() {
   useEffect(() => {
     if (!location || !mounted) return;
 
+    const abortController = new AbortController();
+
     const fetchLocationName = async () => {
       try {
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${location.latitude}&lon=${location.longitude}`,
+          `/api/reverse-geocode?lat=${location.latitude}&lon=${location.longitude}`,
           {
             cache: 'no-store',
-            referrerPolicy: 'no-referrer',
+            signal: abortController.signal,
           }
         );
         if (!response.ok) return;
 
         const data = await response.json();
-        setLocationName(parseReverseGeocodeLabel(data));
-      } catch {
+        setLocationName(data.label ?? null);
+      } catch (error: unknown) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+
         // Silently fail and fallback to translations
       }
     };
 
     fetchLocationName();
+
+    return () => abortController.abort();
   }, [location, mounted]);
 
   useEffect(() => {

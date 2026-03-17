@@ -4,6 +4,7 @@ import { translations } from '@/lib/translations';
 import { useState } from 'react';
 import HijriCalendar from '@/components/hijri-calendar';
 import CalendarHeader from '@/components/calendar-header';
+import AllIslamicEvents from '@/components/all-islamic-events';
 import { getHijriDate } from '@/lib/hijri';
 
 export default function CalendarPage() {
@@ -36,6 +37,7 @@ export default function CalendarPage() {
           currentHijriDate={currentHijriDate}
           setCurrentHijriDate={setCurrentHijriDate}
         />
+        <AllIslamicEvents lang={lang} year={currentHijriDate.year} />
       </main>
     </div>
   );

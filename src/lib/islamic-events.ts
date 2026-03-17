@@ -45,13 +45,6 @@ export const islamicEvents: IslamicEvent[] = [
     description: "The first day of the holy month of fasting, prayer, and reflection.",
   },
   {
-    month: 9,
-    day: 27,
-    name: "Laylat al-Qadr",
-    nameAr: "ليلة القدر",
-    description: "The 'Night of Power,' one of the most sacred nights in the last ten days of Ramadan.",
-  },
-  {
     month: 10,
     day: 1,
     name: "Eid al-Fitr",

@@ -136,7 +136,8 @@ Purpose:
 
 Observed request pattern:
 
-- `https://api.aladhan.com/v1/timings/{unixTimestamp}?latitude={lat}&longitude={lon}&method={method}`
+- Browser request: `/api/prayer-times?timestamp={unixTimestamp}&latitude={lat}&longitude={lon}&method={method}`
+- Server-side upstream request: `https://api.aladhan.com/v1/timings/{unixTimestamp}?latitude={lat}&longitude={lon}&method={method}`
 
 Data sent from client:
 
@@ -152,7 +153,8 @@ Data received by client:
 Security relevance:
 
 - This is the main live data source for core religious timing data
-- Coordinates are transmitted from the client directly to the external API
+- Coordinates are sent to an application-controlled API route instead of directly to AlAdhan
+- Third-party infrastructure details are not exposed to the browser response
 - Responses are cached in browser local storage
 - The current implementation now validates the returned payload shape before use
 
@@ -164,7 +166,8 @@ Purpose:
 
 Observed request pattern:
 
-- `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={lat}&lon={lon}`
+- Browser request: `/api/reverse-geocode?lat={lat}&lon={lon}`
+- Server-side upstream request: `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={lat}&lon={lon}`
 
 Data sent from client:
 
@@ -173,11 +176,12 @@ Data sent from client:
 
 Data received by client:
 
-- Reverse geocoded address details used for UI display
+- Parsed location label used for UI display
 
 Security relevance:
 
-- Coordinates are transmitted from the client directly to the external API
+- Coordinates are sent to an application-controlled API route instead of directly to Nominatim
+- Third-party infrastructure headers are not exposed to the browser response
 - Used for display only and not required for local prayer calculation cache lookup
 - The current implementation now validates the returned payload shape before use
 
@@ -267,8 +271,8 @@ Important note: cached prayer time entries now expire after 24 hours. Cache inva
 
 ### Data sent externally
 
-- Coordinates sent to AlAdhan API for prayer times
-- Coordinates sent to Nominatim API for reverse geocoding
+- Coordinates sent to the application prayer-times route, which forwards them to AlAdhan server-side
+- Coordinates sent to the application reverse-geocoding route, which forwards them to Nominatim server-side
 
 ### Data not observed in current implementation
 
@@ -280,8 +284,8 @@ Important note: cached prayer time entries now expire after 24 hours. Cache inva
 
 ## Server-Side / Backend Notes
 
-- The current implementation does not expose a custom backend API route for prayer times or geocoding
-- External requests are initiated directly from the client/browser
+- The current implementation exposes a custom backend API route for prayer times at `/api/prayer-times`
+- The current implementation exposes a custom backend API route for reverse geocoding at `/api/reverse-geocode`
 - Firebase App Hosting configuration exists, but no active Firebase database, authentication, or storage integration was identified in the current application flow
 - Genkit and Google GenAI dependencies exist in the repository, but no user-facing AI flow or connected AI feature was identified in current app routes
 
@@ -291,7 +295,9 @@ The following items were verified from the current codebase:
 
 - Content Security Policy is configured in the current Next.js configuration
 - Response security headers including `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, and `Strict-Transport-Security` are configured in application configuration
-- No backend proxy layer was identified for third-party API requests
+- Next.js `X-Powered-By` is disabled in application configuration and app-controlled responses now explicitly strip `X-Powered-By` and `Server` where the framework exposes response headers
+- Prayer time requests are routed through an application-controlled backend proxy that does not forward upstream response headers to the browser
+- Reverse geocoding is routed through an application-controlled backend proxy that does not forward upstream infrastructure headers to the browser
 - Runtime schema validation is implemented for responses returned by the prayer-time and reverse-geocoding APIs
 - TypeScript build errors are no longer configured to be ignored during build
 - ESLint findings are no longer configured to be ignored during build
@@ -327,8 +333,8 @@ Recommended hardening:
 
 Observed behavior:
 
-- Browser requests AlAdhan directly
-- Browser requests Nominatim directly
+- Browser requests prayer times through the same-origin `/api/prayer-times` endpoint
+- Browser requests reverse geocoding through the same-origin `/api/reverse-geocode` endpoint
 
 Risk level:
 
@@ -337,8 +343,9 @@ Risk level:
 
 Recommended hardening:
 
-- Route requests through an application-controlled backend proxy for production-scale deployment
-- Add server-side caching and request validation if a proxy is introduced
+- Keep prayer-time requests on the application-controlled backend proxy in production
+- Keep reverse geocoding on the application-controlled backend proxy in production
+- Consider adding server-side caching and rate limiting for both proxy routes if request volume grows
 
 ### 3. Missing Frontend Hardening Headers
 
@@ -361,13 +368,31 @@ Illustrative CSP baseline:
 Content-Security-Policy:
 default-src 'self';
 script-src 'self';
-connect-src 'self' https://api.aladhan.com https://nominatim.openstreetmap.org;
+connect-src 'self';
 img-src 'self' data: https:;
 style-src 'self' 'unsafe-inline';
 font-src 'self' https://fonts.gstatic.com;
 ```
 
-### 4. Dependency and Supply-Chain Risk
+### 4. Server and Technology Fingerprinting
+
+Observed behavior:
+
+- Application-controlled responses now delete `X-Powered-By` and `Server` before headers are finalized
+- Next.js `poweredByHeader` is disabled in configuration
+- If a deployed environment still returns `Server: Caddy`, `Server: FrankenPHP`, or a custom `X-Powered-By` value such as `Kipchak by Mamluk`, that header is being injected by infrastructure after the app response leaves Next.js
+
+Risk level:
+
+- High when the final deployed response exposes product or internal platform names
+
+Recommended hardening:
+
+- Keep application-level stripping in place to avoid framework-added disclosure
+- Suppress or overwrite `Server` and any custom `X-Powered-By` headers at the hosting, proxy, CDN, or gateway layer in production
+- Verify the final deployed response headers with an external scan after deployment, because upstream infrastructure can re-add headers after application code runs
+
+### 5. Dependency and Supply-Chain Risk
 
 Observed behavior:
 
@@ -504,6 +529,6 @@ Installed but not observed as active in current user-facing flows:
 
 ## Conclusion
 
-This application is currently a location-aware Islamic utility app with client-side settings persistence and direct browser calls to external public APIs for prayer time data and reverse geocoding. Based on the code reviewed, the highest security-relevant data handled by the current implementation is the user's location data, both in transit to third-party services and at rest in browser local storage.
+This application is currently a location-aware Islamic utility app with client-side settings persistence and same-origin backend proxy routes for prayer times and reverse geocoding. The application code now strips common fingerprinting headers where it controls the response, but final `Server` branding still depends on the production hosting and proxy stack. Based on the code reviewed, the highest security-relevant data handled by the current implementation is the user's location data, both in transit to third-party services and at rest in browser local storage.
 
 For a formal security assessment, the main audit priorities should be location privacy, frontend hardening, third-party API trust boundaries, and dependency reduction. The current codebase does not suggest high-risk server-side data exposure, but it would benefit from stronger browser security controls and clearer privacy-oriented data handling options.
