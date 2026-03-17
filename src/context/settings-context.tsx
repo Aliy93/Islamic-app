@@ -21,7 +21,9 @@ function getInitialLocationPermissionState(): LocationPermissionState {
     return 'unknown';
   }
 
-  return 'permissions' in navigator && navigator.permissions?.query ? 'unknown' : 'unsupported';
+  return 'permissions' in navigator && typeof navigator.permissions?.query === 'function'
+    ? 'unknown'
+    : 'unsupported';
 }
 
 const settingsNumberSchema = locationSchema.shape.latitude;
@@ -180,7 +182,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    if (!('permissions' in navigator) || !navigator.permissions?.query) {
+    if (!('permissions' in navigator) || typeof navigator.permissions?.query !== 'function') {
       return;
     }
 
