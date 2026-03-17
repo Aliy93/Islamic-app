@@ -16,6 +16,14 @@ type Location = {
 
 type LocationPermissionState = PermissionState | 'unknown' | 'unsupported';
 
+function getInitialLocationPermissionState(): LocationPermissionState {
+  if (typeof navigator === 'undefined') {
+    return 'unknown';
+  }
+
+  return 'permissions' in navigator && navigator.permissions?.query ? 'unknown' : 'unsupported';
+}
+
 const settingsNumberSchema = locationSchema.shape.latitude;
 
 interface SettingsContextType {
@@ -94,7 +102,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   });
 
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [locationPermissionState, setLocationPermissionState] = useState<LocationPermissionState>('unknown');
+  const [locationPermissionState, setLocationPermissionState] = useState<LocationPermissionState>(getInitialLocationPermissionState);
   const autoSwitchedToManualRef = useRef(false);
   const { toast } = useToast();
 
@@ -173,7 +181,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (typeof window === 'undefined') return;
 
     if (!('permissions' in navigator) || !navigator.permissions?.query) {
-      setLocationPermissionState('unsupported');
       return;
     }
 
