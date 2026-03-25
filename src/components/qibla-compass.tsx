@@ -15,12 +15,12 @@ import { formatLocalizedNumber } from '@/lib/localization';
 // Kaaba SVG Icon
 const KaabaIcon = () => (
   <svg
-    width="48"
-    height="48"
+    width="36"
+    height="36"
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full text-primary"
+    className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full text-[#DCA15D] drop-shadow-sm"
   >
     <path
       d="M3.75 3.75L12 2L20.25 3.75L12 5.5L3.75 3.75Z"
@@ -40,42 +40,31 @@ const KaabaIcon = () => (
   </svg>
 );
 
-// North Needle SVG
-const NorthNeedle = ({ rotation }: { rotation: number }) => (
-  <div
-    className="absolute inset-0 flex items-center justify-center transition-transform duration-200 ease-in-out"
-    style={{ transform: `rotate(${rotation}deg)` }}
-  >
-    <div className="relative w-4 h-64">
-      {/* Red part (North) */}
-      <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-0"
-        style={{
-          borderLeft: '8px solid transparent',
-          borderRight: '8px solid transparent',
-          borderBottom: '96px solid hsl(var(--destructive))',
-        }}
-      ></div>
-       {/* White part (South) */}
-       <div
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0"
-        style={{
-          borderLeft: '8px solid transparent',
-          borderRight: '8px solid transparent',
-          borderTop: '96px solid hsl(var(--muted))',
-        }}
-      ></div>
-    </div>
-  </div>
-);
+// North needle removed — using only the Qibla needle (Kaaba icon) now.
 
-const QiblaNeedle = ({ rotation }: { rotation: number }) => (
+const QiblaNeedle = ({ rotation, isAligned = false }: { rotation: number; isAligned?: boolean }) => (
   <div
-    className="absolute inset-0 flex items-center justify-center transition-transform duration-200 ease-in-out"
-    style={{ transform: `rotate(${rotation}deg)` }}
+    className="absolute inset-0 flex items-center justify-center transition-transform duration-500 ease-in-out"
+    style={{ transform: `rotate(${rotation}deg)`, boxShadow: isAligned ? '0 0 16px rgba(220,161,93,0.85)' : undefined }}
   >
-    <div className="relative w-4 h-64">
-      <KaabaIcon />
+    <div className="relative w-6 h-64">
+      {/* Shaft (shortened) */}
+      <div className="absolute left-1/2 top-12 -translate-x-1/2 w-1 bg-[#DCA15D] rounded-full shadow-sm h-36" />
+
+      {/* Arrowhead */}
+      <div
+        className="absolute top-4 left-1/2 -translate-x-1/2 w-0 h-0"
+        style={{
+          borderLeft: '10px solid transparent',
+          borderRight: '10px solid transparent',
+          borderBottom: '18px solid #DCA15D',
+        }}
+      />
+
+      {/* Kaaba marker at the tip (pulses when aligned) */}
+      <div className={cn('absolute top-0 left-1/2 -translate-x-1/2', isAligned ? 'animate-pulse' : '')}>
+        <KaabaIcon />
+      </div>
     </div>
   </div>
 );
@@ -351,11 +340,8 @@ export default function QiblaCompass() {
             </div>
             <CompassFrame topLabel={topLabel} isAligned={isAligned}>
 
-              {/* North-pointing Needle (magnetic north) */}
-              <NorthNeedle rotation={-deviceHeadingMagneticNorth} />
-              
-              {/* Qibla Direction Indicator */}
-              <QiblaNeedle rotation={arrowRotation} />
+              {/* Qibla Direction Indicator (Kaaba icon) */}
+              <QiblaNeedle rotation={arrowRotation} isAligned={isAligned} />
             </CompassFrame>
 
             <div className="text-center text-primary">
