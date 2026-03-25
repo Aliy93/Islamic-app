@@ -49,6 +49,7 @@ export default function BottomNav() {
             </Link>
           );
         })}
+        </div>
       </div>
     </nav>
   );
