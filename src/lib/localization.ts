@@ -1,5 +1,5 @@
 import { getLocaleTag, Language, usesEasternArabicNumerals } from '@/context/language-context';
-import { getGregorianDateFromHijri } from '@/lib/hijri';
+import { getGregorianDateFromHijri, getHijriDate } from '@/lib/hijri';
 import { toArabicNumerals } from '@/lib/utils';
 
 const REFERENCE_HIJRI_YEAR = 1447;
@@ -32,10 +32,30 @@ export function formatLocalizedTime(date: Date, lang: Language): string {
 }
 
 export function formatLocalizedHijriMonth(date: Date, lang: Language): string {
-  return withFallback(
-    () => new Intl.DateTimeFormat(`${getLocaleTag(lang)}-u-ca-islamic-umalqura`, { month: 'long' }).format(date),
-    () => new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { month: 'long' }).format(date)
-  );
+  return withFallback(() => {
+    if (lang === 'om') {
+      // Provide Latin-script Hijri month names appropriate for Afan Oromo users
+      const hijri = getHijriDate(date, 0);
+      const omMonths = [
+        'Muharram',
+        'Safar',
+        "Rabi'ul-Awwal",
+        "Rabi'ul-Thani",
+        'Jumada I',
+        'Jumada II',
+        'Rajab',
+        "Sha'ban",
+        'Ramadan',
+        'Shawwal',
+        "Dhu'l-Qi'dah",
+        "Dhu'l-Hijjah",
+      ];
+      return omMonths[Math.max(0, Math.min(11, hijri.month - 1))];
+    }
+
+    const localeForHijri = `${getLocaleTag(lang)}-u-ca-islamic-umalqura`;
+    return new Intl.DateTimeFormat(localeForHijri, { month: 'long' }).format(date);
+  }, () => new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { month: 'long' }).format(date));
 }
 
 export function formatLocalizedHijriMonthByNumber(month: number, lang: Language): string {
