@@ -194,7 +194,6 @@ export default function QiblaCompass() {
     isLoading,
     qiblaBearingTrueNorth,
     magneticDeclination,
-    deviceHeadingMagneticNorth,
     arrowRotation,
     needsCalibration,
     isCompassActive,

@@ -27,30 +27,31 @@ export default function BottomNav() {
     if (typeof window === 'undefined' || !el) return;
 
     const update = () => {
-      const vv = (window as any).visualViewport;
+      const win = window as Window & { visualViewport?: VisualViewport };
+      const vv = win.visualViewport;
       if (!vv) {
         el.style.transform = '';
         return;
       }
       const keyboardHeight = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
-      // Move the nav up by the keyboard/viewport inset so it remains visible.
       el.style.transform = keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : '';
     };
 
     update();
     window.addEventListener('resize', update);
     window.addEventListener('orientationchange', update);
-    if ((window as any).visualViewport) {
-      (window as any).visualViewport.addEventListener('resize', update);
-      (window as any).visualViewport.addEventListener('scroll', update);
+    const win = window as Window & { visualViewport?: VisualViewport };
+    if (win.visualViewport) {
+      win.visualViewport.addEventListener('resize', update);
+      win.visualViewport.addEventListener('scroll', update);
     }
 
     return () => {
       window.removeEventListener('resize', update);
       window.removeEventListener('orientationchange', update);
-      if ((window as any).visualViewport) {
-        (window as any).visualViewport.removeEventListener('resize', update);
-        (window as any).visualViewport.removeEventListener('scroll', update);
+      if (win.visualViewport) {
+        win.visualViewport.removeEventListener('resize', update);
+        win.visualViewport.removeEventListener('scroll', update);
       }
     };
   }, []);
