@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -6,11 +6,13 @@ import { Home, Calendar, Compass, Settings } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
+import { useEffect, useRef } from 'react';
 
 export default function BottomNav() {
   const { lang } = useLanguage();
   const t = translations[lang];
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement | null>(null);
 
   const navItems = [
     { href: '/', label: t.home, icon: Home },
@@ -19,8 +21,42 @@ export default function BottomNav() {
     { href: '/settings', label: t.settings, icon: Settings },
   ];
 
+  // Keep bottom nav visible when the visual viewport changes (keyboard, orientation, device motion).
+  useEffect(() => {
+    const el = navRef.current;
+    if (typeof window === 'undefined' || !el) return;
+
+    const update = () => {
+      const vv = (window as any).visualViewport;
+      if (!vv) {
+        el.style.transform = '';
+        return;
+      }
+      const keyboardHeight = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
+      // Move the nav up by the keyboard/viewport inset so it remains visible.
+      el.style.transform = keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : '';
+    };
+
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    if ((window as any).visualViewport) {
+      (window as any).visualViewport.addEventListener('resize', update);
+      (window as any).visualViewport.addEventListener('scroll', update);
+    }
+
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+      if ((window as any).visualViewport) {
+        (window as any).visualViewport.removeEventListener('resize', update);
+        (window as any).visualViewport.removeEventListener('scroll', update);
+      }
+    };
+  }, []);
+
   return (
-    <nav className="fixed bottom-0 inset-x-0 flex justify-center z-50">
+    <nav ref={navRef} className="fixed bottom-0 inset-x-0 flex justify-center z-50">
       <div className="w-full max-w-md bg-white/80 dark:bg-card/80 backdrop-blur-lg border-t border-border/50">
         <div className="flex justify-around items-center h-20 px-4">
         {navItems.map(({ href, label, icon: Icon }) => {
