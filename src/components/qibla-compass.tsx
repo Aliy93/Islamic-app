@@ -42,10 +42,10 @@ const KaabaIcon = () => (
 
 // North needle removed — using only the Qibla needle (Kaaba icon) now.
 
-const QiblaNeedle = ({ rotation, isAligned = false }: { rotation: number; isAligned?: boolean }) => (
+const QiblaNeedle = ({ rotation }: { rotation: number }) => (
   <div
-    className="absolute inset-0 flex items-center justify-center transition-transform duration-500 ease-in-out"
-    style={{ transform: `rotate(${rotation}deg)`, boxShadow: isAligned ? '0 0 16px rgba(220,161,93,0.85)' : undefined }}
+    className="absolute inset-0 flex items-center justify-center transition-transform duration-200 ease-in-out"
+    style={{ transform: `rotate(${rotation}deg)` }}
   >
     <div className="relative w-6 h-64">
       {/* Shaft (shortened) */}
@@ -61,8 +61,8 @@ const QiblaNeedle = ({ rotation, isAligned = false }: { rotation: number; isAlig
         }}
       />
 
-      {/* Kaaba marker at the tip (pulses when aligned) */}
-      <div className={cn('absolute top-0 left-1/2 -translate-x-1/2', isAligned ? 'animate-pulse' : '')}>
+      {/* Kaaba marker at the tip */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2">
         <KaabaIcon />
       </div>
     </div>
@@ -340,7 +340,7 @@ export default function QiblaCompass() {
             <CompassFrame topLabel={topLabel} isAligned={isAligned}>
 
               {/* Qibla Direction Indicator (Kaaba icon) */}
-              <QiblaNeedle rotation={arrowRotation} isAligned={isAligned} />
+              <QiblaNeedle rotation={arrowRotation} />
             </CompassFrame>
 
             <div className="text-center text-primary">
