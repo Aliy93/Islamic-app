@@ -136,7 +136,7 @@ Purpose:
 
 Observed request pattern:
 
-- Browser request: `/api/prayer-times?timestamp={unixTimestamp}&latitude={lat}&longitude={lon}&method={method}`
+4- Browser request: `/api/prayer-times?timestamp={unixTimestamp}&latitude={lat}&longitude={lon}&method={method}`
 - Server-side upstream request: `https://api.aladhan.com/v1/timings/{unixTimestamp}?latitude={lat}&longitude={lon}&method={method}`
 
 Data sent from client:
