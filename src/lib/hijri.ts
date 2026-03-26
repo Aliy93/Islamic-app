@@ -1,5 +1,6 @@
 
 import { addDays, differenceInCalendarDays, subDays } from 'date-fns';
+import { getDefaultHijriMonthNames } from '@/lib/hijri-months';
 
 export type HijriDateInfo = {
   day: number;
@@ -38,13 +39,8 @@ const getHijriParts = (date: Date): Record<string, string> => {
   }, {} as Record<string, string>);
 };
 
-const getHijriMonthNames = (date: Date): { monthName: string, monthNameAr: string } => {
-    if (!date || isNaN(date.getTime())) {
-      return { monthName: 'Muharram', monthNameAr: 'محرم' };
-    }
-    const monthName = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { month: 'long' }).format(date);
-    const monthNameAr = new Intl.DateTimeFormat('ar-u-ca-islamic-umalqura', { month: 'long' }).format(date);
-    return { monthName, monthNameAr };
+const getHijriMonthNames = (month: number): { monthName: string, monthNameAr: string } => {
+    return getDefaultHijriMonthNames(month);
 }
 
 function toStableDate(date: Date): Date {
@@ -109,11 +105,12 @@ export function getHijriDate(gregorianDate: Date, adjustment: number = 0): Hijri
   const adjustedDate = subDays(gregorianDate, adjustment);
 
   const parts = getHijriParts(adjustedDate);
-  const { monthName, monthNameAr } = getHijriMonthNames(adjustedDate);
+  const month = parseInt(parts.month, 10);
+  const { monthName, monthNameAr } = getHijriMonthNames(month);
 
   return {
     day: parseInt(parts.day, 10),
-    month: parseInt(parts.month, 10),
+    month,
     year: parseInt(parts.year, 10),
     monthName,
     monthNameAr,
