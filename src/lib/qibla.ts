@@ -36,21 +36,6 @@ export function calculateQibla(lat: number, lon: number): number {
   return bearing;
 }
 
-/**
- * Provides an approximation of magnetic declination.
- * Since the geomagnetism library is problematic for browser bundling,
- * we use a simple fallback of 0. For more accuracy, a browser-compatible
- * WMM-lite implementation or an API call would be required.
- * @returns An estimated magnetic declination in degrees.
- */
-export function getMagneticDeclination(lat: number, lon: number): number {
-  void lat;
-  void lon;
-  // Fallback to 0 to ensure the app builds and runs in the browser.
-  // In a production app, you might use a browser-safe library or a small lookup table.
-  return 0;
-}
-
 export function circularStdDevDeg(anglesDeg: number[]): number {
   if (anglesDeg.length === 0) return 0;
   const anglesRad = anglesDeg.map((a) => (a * Math.PI) / 180);

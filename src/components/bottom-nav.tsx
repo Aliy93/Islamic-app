@@ -6,13 +6,11 @@ import { Home, Calendar, Compass, Settings } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
-import { useEffect, useRef } from 'react';
 
 export default function BottomNav() {
   const { lang } = useLanguage();
   const t = translations[lang];
   const pathname = usePathname();
-  const navRef = useRef<HTMLElement | null>(null);
 
   const navItems = [
     { href: '/', label: t.home, icon: Home },
@@ -21,45 +19,10 @@ export default function BottomNav() {
     { href: '/settings', label: t.settings, icon: Settings },
   ];
 
-  // Keep bottom nav visible when the visual viewport changes (keyboard, orientation, device motion).
-  useEffect(() => {
-    const el = navRef.current;
-    if (typeof window === 'undefined' || !el) return;
-
-    const update = () => {
-      const win = window as Window & { visualViewport?: VisualViewport };
-      const vv = win.visualViewport;
-      if (!vv) {
-        el.style.transform = '';
-        return;
-      }
-      const keyboardHeight = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
-      el.style.transform = keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : '';
-    };
-
-    update();
-    window.addEventListener('resize', update);
-    window.addEventListener('orientationchange', update);
-    const win = window as Window & { visualViewport?: VisualViewport };
-    if (win.visualViewport) {
-      win.visualViewport.addEventListener('resize', update);
-      win.visualViewport.addEventListener('scroll', update);
-    }
-
-    return () => {
-      window.removeEventListener('resize', update);
-      window.removeEventListener('orientationchange', update);
-      if (win.visualViewport) {
-        win.visualViewport.removeEventListener('resize', update);
-        win.visualViewport.removeEventListener('scroll', update);
-      }
-    };
-  }, []);
-
   return (
-    <nav ref={navRef} className="fixed bottom-0 inset-x-0 flex justify-center z-50">
-      <div className="w-full max-w-md bg-white/80 dark:bg-card/80 backdrop-blur-lg border-t border-border/50">
-        <div className="flex justify-around items-center h-20 px-4">
+    <nav className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-2 [padding-bottom:env(safe-area-inset-bottom)]">
+      <div className="w-full max-w-md rounded-t-[28px] border border-border/50 border-b-0 bg-white/90 shadow-[0_-10px_30px_rgba(11,85,43,0.08)] backdrop-blur-lg dark:bg-card/90">
+        <div className="flex h-20 items-center justify-around px-4">
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href;
           return (

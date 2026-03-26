@@ -90,7 +90,7 @@ The Qibla page provides:
 - Permission request flow for device orientation access where required
 - Static fallback guidance when compass APIs are unavailable or denied
 
-Important note: the current magnetic declination implementation is a local fallback value of `0`, so Qibla guidance is based on true-north bearing with browser/device compass readings. No external geomagnetic API is currently used.
+Important note: magnetic declination is now computed server-side through the same-origin `/api/declination` route using a World Magnetic Model dataset, then cached client-side by rounded coordinates. The Qibla compass applies that correction only when the device sensor reports a magnetic heading.
 
 ### 5. Settings
 

@@ -193,7 +193,8 @@ export default function QiblaCompass() {
     requestPermission,
     isLoading,
     qiblaBearingTrueNorth,
-    magneticDeclination,
+    appliedDeclination,
+    headingReference,
     arrowRotation,
     needsCalibration,
     isCompassActive,
@@ -381,7 +382,11 @@ export default function QiblaCompass() {
 
             <div className="rounded-[24px] border border-primary/10 bg-white/70 px-4 py-3 text-center text-sm text-muted-foreground shadow-sm">
               <p>{t.qiblaHoldFlat}</p>
-              <p className="mt-1">{t.declination}: {formatLocalizedNumber(magneticDeclination.toFixed(1), lang)}°</p>
+              <p className="mt-1">
+                {headingReference === 'magnetic'
+                  ? `${t.declination}: ${formatLocalizedNumber(appliedDeclination.toFixed(1), lang)}°`
+                  : t.qiblaBearingFromNorth}
+              </p>
               {compassAccuracy != null && compassAccuracy > 25 ? (
                 <p className="mt-2 font-medium text-[#DCA15D]">{t.qiblaAccuracyLow}</p>
               ) : null}

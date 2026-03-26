@@ -45,8 +45,8 @@ export default function RootLayout({
       <body className={`${alegreya.variable} ${notoKufiArabic.variable} ${notoSansEthiopic.variable} font-sans antialiased`}>
         <LanguageProvider>
           <SettingsProvider>
-            <div className="max-w-md mx-auto bg-background shadow-lg min-h-screen flex flex-col">
-              <main className="flex-grow pb-20">
+            <div className="mx-auto flex min-h-[100dvh] max-w-md flex-col bg-background shadow-lg">
+              <main className="flex-grow pb-24">
                 {children}
               </main>
               <BottomNav />

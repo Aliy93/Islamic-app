@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSettings } from '@/context/settings-context';
-import { calculateQibla, circularStdDevDeg, getMagneticDeclination, smoothCompass } from '@/lib/qibla';
+import { calculateQibla, circularStdDevDeg, smoothCompass } from '@/lib/qibla';
 
 type PermissionState = 'prompt' | 'granted' | 'denied';
 type CompassSupport = 'generic-sensors' | 'deviceorientation' | 'none';
+type HeadingReference = 'magnetic' | 'true' | 'unknown';
 
 type PermissionResponse = 'granted' | 'denied';
 
@@ -41,12 +42,56 @@ function normalizeDeg(deg: number): number {
   return (deg % 360 + 360) % 360;
 }
 
+const DECLINATION_CACHE_PREFIX = 'qiblaDeclination:';
+const DECLINATION_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+
+function buildDeclinationCacheKey(latitude: number, longitude: number) {
+  return `${DECLINATION_CACHE_PREFIX}${latitude.toFixed(3)},${longitude.toFixed(3)}`;
+}
+
+function readCachedDeclination(cacheKey: string) {
+  if (typeof window === 'undefined') return null;
+
+  const rawValue = window.localStorage.getItem(cacheKey);
+  if (!rawValue) return null;
+
+  try {
+    const parsed = JSON.parse(rawValue) as { declination?: unknown; expiresAt?: unknown };
+    const declination = typeof parsed.declination === 'number' ? parsed.declination : null;
+    const expiresAt = typeof parsed.expiresAt === 'number' ? parsed.expiresAt : null;
+
+    if (declination === null || expiresAt === null || expiresAt <= Date.now()) {
+      window.localStorage.removeItem(cacheKey);
+      return null;
+    }
+
+    return declination;
+  } catch {
+    window.localStorage.removeItem(cacheKey);
+    return null;
+  }
+}
+
+function writeCachedDeclination(cacheKey: string, declination: number) {
+  if (typeof window === 'undefined') return;
+
+  window.localStorage.setItem(
+    cacheKey,
+    JSON.stringify({
+      declination,
+      expiresAt: Date.now() + DECLINATION_CACHE_TTL_MS,
+    })
+  );
+}
+
 export function useQibla() {
   const { location, locationError } = useSettings();
   const [permissionState, setPermissionState] = useState<PermissionState>('prompt');
   const [error, setError] = useState<string | null>(null);
   const [support, setSupport] = useState<CompassSupport>('none');
-  const [deviceHeadingMagneticNorth, setDeviceHeadingMagneticNorth] = useState<number>(0);
+  const [deviceHeading, setDeviceHeading] = useState<number>(0);
+  const [headingReference, setHeadingReference] = useState<HeadingReference>('unknown');
+  const [magneticDeclination, setMagneticDeclination] = useState<number>(0);
   const [isCompassActive, setIsCompassActive] = useState(false);
   const [needsCalibration, setNeedsCalibration] = useState(false);
   const [compassAccuracy, setCompassAccuracy] = useState<number | null>(null);
@@ -62,20 +107,82 @@ export function useQibla() {
     return calculateQibla(location.latitude, location.longitude);
   }, [location]);
 
-  const magneticDeclination = useMemo(() => {
-    if (!location) return 0;
-    return getMagneticDeclination(location.latitude, location.longitude);
+  useEffect(() => {
+    if (!location) {
+      setMagneticDeclination(0);
+      return;
+    }
+
+    const cacheKey = buildDeclinationCacheKey(location.latitude, location.longitude);
+    const cachedDeclination = readCachedDeclination(cacheKey);
+
+    if (cachedDeclination !== null) {
+      setMagneticDeclination(cachedDeclination);
+      return;
+    }
+
+    let cancelled = false;
+    const abortController = new AbortController();
+
+    const loadDeclination = async () => {
+      try {
+        const url = new URL('/api/declination', window.location.origin);
+        url.searchParams.set('lat', location.latitude.toString());
+        url.searchParams.set('lon', location.longitude.toString());
+
+        const response = await fetch(url, {
+          cache: 'no-store',
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error('Declination lookup failed.');
+        }
+
+        const payload = (await response.json()) as { declination?: unknown };
+        const declination = typeof payload.declination === 'number' ? payload.declination : null;
+        if (declination === null || !Number.isFinite(declination)) {
+          throw new Error('Declination lookup returned an invalid value.');
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setMagneticDeclination(declination);
+        writeCachedDeclination(cacheKey, declination);
+      } catch (loadError: unknown) {
+        if (cancelled) {
+          return;
+        }
+
+        const isAbortError = loadError instanceof Error && loadError.name === 'AbortError';
+        if (!isAbortError) {
+          setMagneticDeclination(0);
+        }
+      }
+    };
+
+    void loadDeclination();
+
+    return () => {
+      cancelled = true;
+      abortController.abort();
+    };
   }, [location]);
 
-  // Per spec:
-  // ArrowRotation = (QiblaBearingTrueNorth - DeviceHeadingMagneticNorth - MagneticDeclination + 360) % 360
-  const arrowRotation = useMemo(() => {
-    return normalizeDeg(qiblaBearingTrueNorth - deviceHeadingMagneticNorth - magneticDeclination);
-  }, [qiblaBearingTrueNorth, deviceHeadingMagneticNorth, magneticDeclination]);
+  const appliedDeclination = useMemo(() => {
+    return headingReference === 'magnetic' ? magneticDeclination : 0;
+  }, [headingReference, magneticDeclination]);
 
-  const setHeading = useCallback((headingMagneticDeg: number) => {
-    const smoothed = smoothCompass(headingMagneticDeg, headingBufferRef.current, 12);
-    setDeviceHeadingMagneticNorth(smoothed);
+  const arrowRotation = useMemo(() => {
+    return normalizeDeg(qiblaBearingTrueNorth - deviceHeading - appliedDeclination);
+  }, [appliedDeclination, deviceHeading, qiblaBearingTrueNorth]);
+
+  const setHeading = useCallback((headingDeg: number, reference: HeadingReference) => {
+    const smoothed = smoothCompass(headingDeg, headingBufferRef.current, 12);
+    setDeviceHeading(smoothed);
+    setHeadingReference(reference);
     setIsCompassActive(true);
 
     const buf = stabilityBufferRef.current;
@@ -96,7 +203,6 @@ export function useQibla() {
     // On phones, prefer the browser-normalized orientation APIs first.
     fallbackSupportRef.current = hasDO && hasGeneric ? 'generic-sensors' : 'none';
     // This effect initializes capability state from browser APIs during mount.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSupport(hasDO ? 'deviceorientation' : hasGeneric ? 'generic-sensors' : 'none');
 
     // On most browsers, there is no explicit permission prompt for orientation.
@@ -139,6 +245,7 @@ export function useQibla() {
       setIsPageVisible(visible);
       if (!visible) {
         setIsCompassActive(false);
+        setHeadingReference('unknown');
       }
     };
 
@@ -159,8 +266,8 @@ export function useQibla() {
 
     let cancelled = false;
     // Reset live sensor state when starting or restarting listeners.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsCompassActive(false);
+    setHeadingReference('unknown');
     setCompassAccuracy(null);
 
     // Reset stability buffers on start
@@ -214,7 +321,7 @@ export function useQibla() {
         heading = normalizeDeg(heading + getScreenOrientationAngle());
 
         setError(null);
-        setHeading(heading);
+        setHeading(heading, 'magnetic');
       };
 
       magnet.addEventListener('reading', onReading);
@@ -274,7 +381,7 @@ export function useQibla() {
           window.clearTimeout(timeoutId);
           heading = normalizeDeg(heading + getScreenOrientationAngle());
           setError(null);
-          setHeading(heading);
+          setHeading(heading, typeof webkitCompassHeading === 'number' ? 'magnetic' : 'true');
           if (accuracy != null && accuracy <= 25) {
             setNeedsCalibration(false);
           }
@@ -323,7 +430,9 @@ export function useQibla() {
   return {
     qiblaBearingTrueNorth,
     magneticDeclination,
-    deviceHeadingMagneticNorth,
+    appliedDeclination,
+    headingReference,
+    deviceHeading,
     arrowRotation,
     needsCalibration,
     isCompassActive,
