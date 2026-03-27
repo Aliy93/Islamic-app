@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Calendar, Compass, Settings } from 'lucide-react';
@@ -7,7 +8,7 @@ import { useLanguage } from '@/context/language-context';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 
-export default function BottomNav() {
+function BottomNav() {
   const { lang } = useLanguage();
   const t = translations[lang];
   const pathname = usePathname();
@@ -20,8 +21,11 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-2 [padding-bottom:env(safe-area-inset-bottom)]">
-      <div className="w-full max-w-md rounded-t-[28px] border border-border/50 border-b-0 bg-white/90 shadow-[0_-10px_30px_rgba(11,85,43,0.08)] backdrop-blur-lg dark:bg-card/90">
+    <nav
+      aria-label="Primary"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]"
+    >
+      <div className="pointer-events-auto w-full max-w-md rounded-t-[28px] border border-border/50 border-b-0 bg-background/95 shadow-[0_-10px_30px_rgba(11,85,43,0.08)] supports-[backdrop-filter]:bg-background/90 supports-[backdrop-filter]:backdrop-blur-lg">
         <div className="flex h-20 items-center justify-around px-4">
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href;
@@ -54,3 +58,5 @@ export default function BottomNav() {
     </nav>
   );
 }
+
+export default memo(BottomNav);

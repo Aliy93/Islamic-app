@@ -49,8 +49,8 @@ export default function RootLayout({
               <main className="flex-grow pb-24">
                 {children}
               </main>
-              <BottomNav />
             </div>
+            <BottomNav />
             <Toaster />
           </SettingsProvider>
         </LanguageProvider>
