@@ -47,9 +47,9 @@ const QiblaNeedle = ({ rotation }: { rotation: number }) => (
     className="absolute inset-0 flex items-center justify-center transition-transform duration-200 ease-in-out"
     style={{ transform: `rotate(${rotation}deg)` }}
   >
-    <div className="relative w-6 h-64">
+    <div className="relative h-56 w-6 sm:h-64">
       {/* Shaft (shortened) */}
-      <div className="absolute left-1/2 top-12 -translate-x-1/2 w-1 bg-[#DCA15D] rounded-full shadow-sm h-36" />
+      <div className="absolute left-1/2 top-12 h-32 w-1 -translate-x-1/2 rounded-full bg-[#DCA15D] shadow-sm sm:h-36" />
 
       {/* Arrowhead */}
       <div
@@ -80,10 +80,10 @@ function getSignedTurnAngle(angle: number) {
 
 function renderCompassShell() {
   return (
-    <div className="brand-compass-shell relative h-80 w-80 rounded-full">
+    <div className="brand-compass-shell relative h-72 w-72 rounded-full sm:h-80 sm:w-80">
       <div className="absolute inset-4 rounded-full border border-primary/15 bg-white/70 shadow-inner"></div>
-      <div className="absolute inset-7 rounded-full border-[5px] border-primary/70"></div>
-      <div className="brand-compass-core absolute inset-[58px] rounded-full border border-primary/10"></div>
+      <div className="absolute inset-6 rounded-full border-4 border-primary/70 sm:inset-7 sm:border-[5px]"></div>
+      <div className="brand-compass-core absolute inset-[54px] rounded-full border border-primary/10 sm:inset-[58px]"></div>
       <div className="relative h-full w-full rounded-full transition-transform duration-200 ease-in-out">
         {Array.from({ length: 120 }).map((_, i) => (
           <div
@@ -91,14 +91,14 @@ function renderCompassShell() {
             className="absolute top-0 left-1/2 h-full w-px -translate-x-1/2"
             style={{ transform: `rotate(${i * 3}deg)` }}
           >
-            <div className={`mx-auto rounded-full bg-primary ${i % 15 === 0 ? 'h-5 w-0.5 opacity-90' : 'h-3 w-px opacity-80'}`}></div>
+            <div className={`mx-auto rounded-full bg-primary ${i % 15 === 0 ? 'h-4 w-0.5 opacity-90 sm:h-5' : 'h-2.5 w-px opacity-80 sm:h-3'}`}></div>
           </div>
         ))}
 
-        <span className="absolute top-8 left-1/2 -translate-x-1/2 font-bold text-xl text-[#DCA15D] drop-shadow-sm">N</span>
-        <span className="absolute bottom-8 left-1/2 -translate-x-1/2 font-bold text-xl text-[#DCA15D]/85">S</span>
-        <span className="absolute left-8 top-1/2 -translate-y-1/2 font-bold text-xl text-[#DCA15D]/85">W</span>
-        <span className="absolute right-8 top-1/2 -translate-y-1/2 font-bold text-xl text-[#DCA15D]/85">E</span>
+        <span className="absolute top-7 left-1/2 -translate-x-1/2 text-lg font-bold text-[#DCA15D] drop-shadow-sm sm:top-8 sm:text-xl">N</span>
+        <span className="absolute bottom-7 left-1/2 -translate-x-1/2 text-lg font-bold text-[#DCA15D]/85 sm:bottom-8 sm:text-xl">S</span>
+        <span className="absolute left-7 top-1/2 -translate-y-1/2 text-lg font-bold text-[#DCA15D]/85 sm:left-8 sm:text-xl">W</span>
+        <span className="absolute right-7 top-1/2 -translate-y-1/2 text-lg font-bold text-[#DCA15D]/85 sm:right-8 sm:text-xl">E</span>
       </div>
 
       <div className="brand-compass-center-shadow absolute left-1/2 top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary-foreground bg-primary"></div>
@@ -117,11 +117,11 @@ function CompassFrame({
 }) {
   return (
     <div className="relative">
-      <div className="absolute -top-4 left-1/2 z-20 -translate-x-1/2 rounded-full border border-primary/20 bg-background px-4 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary shadow-sm">
+      <div className="absolute -top-3 left-1/2 z-20 -translate-x-1/2 rounded-full border border-primary/20 bg-background px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary shadow-sm sm:-top-4 sm:px-4 sm:text-[11px]">
         {topLabel}
       </div>
       {isAligned ? (
-        <div className="brand-aligned-ring absolute inset-6 rounded-full border-4" />
+        <div className="brand-aligned-ring absolute inset-5 rounded-full border-4 sm:inset-6" />
       ) : null}
       {renderCompassShell()}
       {children}
@@ -193,14 +193,10 @@ export default function QiblaCompass() {
     requestPermission,
     isLoading,
     qiblaBearingTrueNorth,
-    appliedDeclination,
-    headingReference,
     arrowRotation,
     needsCalibration,
     isCompassActive,
     isSupported,
-    support,
-    compassAccuracy,
     error,
   } = useQibla();
 
@@ -324,7 +320,7 @@ export default function QiblaCompass() {
     }
 
     return (
-      <div className="flex flex-col items-center justify-center gap-6">
+      <div className="flex flex-col items-center justify-center gap-3 sm:gap-6">
         {permissionState === 'granted' && isCompassActive && needsCalibration && (
           <Alert>
             <Zap className="w-4 h-4" />
@@ -332,9 +328,9 @@ export default function QiblaCompass() {
             <AlertDescription>{t.calibrating}</AlertDescription>
           </Alert>
         )}
-        <Card className="brand-card-surface w-full max-w-[26rem] rounded-[32px] border-primary/10 backdrop-blur">
-          <CardContent className="flex flex-col items-center gap-6 p-5 sm:p-6">
-            <div className="flex items-center gap-2 rounded-full border border-primary/10 bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary shadow-sm">
+        <Card className="brand-card-surface w-full max-w-[27rem] rounded-[28px] border-primary/10 backdrop-blur sm:max-w-[26rem] sm:rounded-[32px]">
+          <CardContent className="flex flex-col items-center gap-3 p-3.5 sm:gap-6 sm:p-6">
+            <div className="flex items-center gap-2 rounded-full border border-primary/10 bg-white/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary shadow-sm sm:text-[11px]">
               <Compass className="h-3.5 w-3.5" />
               {t.qiblaDirection}
             </div>
@@ -346,50 +342,19 @@ export default function QiblaCompass() {
 
             <div className="text-center text-primary">
               <div className={cn(
-                'mt-1 inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm',
+                'mt-1 inline-flex items-center rounded-full px-3 py-1.5 text-sm font-semibold shadow-sm',
                 isAligned
                   ? 'border border-[#DCA15D]/40 bg-[#DCA15D]/15 text-[#0B552B]'
                   : 'border border-primary/20 bg-primary/10 text-primary'
               )}>
                 {turnInstruction}
               </div>
-              <p className="mt-4 text-6xl font-black tracking-tight">
+              <p className="mt-2.5 text-5xl font-black tracking-tight sm:mt-4 sm:text-6xl">
                 {formatBearing(qiblaBearingTrueNorth, lang)}
               </p>
-              <p className="mt-2 text-sm text-muted-foreground font-body">
+              <p className="mt-1 text-sm text-muted-foreground font-body">
                 {t.qiblaRotatePhone}
               </p>
-            </div>
-
-            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-[22px] border border-primary/10 bg-white/80 p-4 text-center shadow-sm">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{t.bearing}</p>
-                <p className="mt-2 text-2xl font-bold text-primary">{formatBearing(qiblaBearingTrueNorth, lang)}</p>
-              </div>
-              <div className="rounded-[22px] border border-primary/10 bg-white/80 p-4 text-center shadow-sm">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{t.source}</p>
-                <p className="mt-2 text-sm font-semibold text-primary">{support === 'generic-sensors' ? t.sensors : t.deviceOrientation}</p>
-              </div>
-              <div className="rounded-[22px] border border-primary/10 bg-white/80 p-4 text-center shadow-sm">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{t.qiblaAccuracy}</p>
-                <p className="mt-2 text-sm font-semibold text-primary">
-                  {compassAccuracy != null
-                    ? `${formatLocalizedNumber(compassAccuracy.toFixed(0), lang)}°`
-                    : t.qiblaHoldFlat}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-primary/10 bg-white/70 px-4 py-3 text-center text-sm text-muted-foreground shadow-sm">
-              <p>{t.qiblaHoldFlat}</p>
-              <p className="mt-1">
-                {headingReference === 'magnetic'
-                  ? `${t.declination}: ${formatLocalizedNumber(appliedDeclination.toFixed(1), lang)}°`
-                  : t.qiblaBearingFromNorth}
-              </p>
-              {compassAccuracy != null && compassAccuracy > 25 ? (
-                <p className="mt-2 font-medium text-[#DCA15D]">{t.qiblaAccuracyLow}</p>
-              ) : null}
             </div>
           </CardContent>
         </Card>

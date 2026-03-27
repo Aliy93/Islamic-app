@@ -77,7 +77,7 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
     return (
       <div className="space-y-3">
         {[...Array(6)].map((_, i) => (
-          <Skeleton key={i} className="h-16 w-full rounded-2xl" />
+          <Skeleton key={i} className="h-14 w-full rounded-2xl" />
         ))}
       </div>
     );
@@ -118,23 +118,23 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
         const isNext = prayer.name === nextPrayerName;
         return (
           <li key={prayer.name} className={cn(
-            "group flex items-center justify-between p-4 rounded-[20px] transition-all duration-300 relative overflow-hidden",
+            "group relative flex items-center justify-between overflow-hidden rounded-[20px] p-3.5 transition-all duration-300",
             isNext
-              ? 'premium-gradient text-white shadow-xl shadow-primary/20 scale-[1.02] border border-[#DCA15D]/30'
+              ? 'premium-gradient border border-[#DCA15D]/30 text-white shadow-lg shadow-primary/15'
               : 'bg-card border border-border/50 hover:border-primary/20'
           )}>
             {isNext && <div className="absolute inset-0 islamic-pattern opacity-5 pointer-events-none" />}
             
-            <div className="flex items-center gap-4 relative z-10">
+            <div className="relative z-10 flex items-center gap-3">
               <div className={cn(
-                "p-2.5 rounded-xl transition-colors",
+                "rounded-xl p-2 transition-colors",
                 isNext ? 'bg-white/10 text-[#DCA15D] border border-white/10 shadow-inner' : 'bg-secondary/50 text-primary'
               )}>
                 {prayerIcons[prayer.name]}
               </div>
               <div>
                 <p className={cn(
-                  "font-bold text-lg font-headline tracking-wide",
+                  "font-bold text-base font-headline tracking-wide sm:text-lg",
                   isNext ? 'text-white' : 'text-foreground'
                 )}>
                   {t.prayers[prayer.name]?.label}
@@ -150,7 +150,7 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
 
             <div className="relative z-10">
               <p className={cn(
-                "font-bold text-xl font-mono tracking-tight",
+                "font-bold text-lg font-mono tracking-tight sm:text-xl",
                 isNext ? 'text-white' : 'text-foreground/80'
               )}>
                 {prayer.begins}

@@ -164,7 +164,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full p-5 space-y-6" dir={isRtlLanguage(lang) ? 'rtl' : 'ltr'}>
       {/* Premium Next Prayer Card */}
-      <div className="premium-gradient border border-[#DCA15D]/30 text-white p-6 rounded-[24px] shadow-2xl relative overflow-hidden transition-all group">
+      <div className="premium-gradient border border-[#DCA15D]/30 text-white px-5 py-4 rounded-[24px] shadow-2xl relative overflow-hidden transition-all group">
         <div className="absolute inset-0 islamic-pattern opacity-10" />
         
         {/* Corner Ornaments */}
@@ -174,21 +174,21 @@ export default function Home() {
         <IslamicCorner className="bottom-2 right-2 rotate-180" />
 
         <div className="relative z-10 flex flex-col items-center">
-          <div className="flex items-center gap-2 mb-3 bg-[#DCA15D]/20 border border-[#DCA15D]/40 px-4 py-1.5 rounded-full backdrop-blur-md">
+          <div className="mb-2 flex items-center gap-2 rounded-full border border-[#DCA15D]/40 bg-[#DCA15D]/20 px-4 py-1.5 backdrop-blur-md">
             <Moon className="w-4 h-4 text-[#DCA15D]" />
             <p className="text-[10px] font-bold text-[#DCA15D] uppercase tracking-[0.2em]">{t.timeTill}</p>
           </div>
           
-          <h2 className="text-2xl font-bold mb-2 font-headline text-white/90 tracking-wide">
+          <h2 className="mb-1 text-xl font-bold font-headline tracking-wide text-white/90">
             {mounted && nextPrayer ? t.prayers[nextPrayer.name]?.label : '...'}
           </h2>
           
-          <div className="text-6xl font-black font-mono tracking-tighter drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] text-white">
+          <div className="text-5xl font-black font-mono tracking-tighter drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] text-white sm:text-6xl">
             {mounted ? (timeToNextPrayer || '00:00:00') : '00:00:00'}
           </div>
           
           {location && (
-            <div className="mt-6 flex items-center gap-2 text-[#DCA15D] text-[10px] font-bold uppercase tracking-[0.2em] bg-white/10 px-4 py-2 rounded-full border border-white/10 backdrop-blur-sm shadow-inner transition-all hover:bg-white/20">
+            <div className="mt-4 flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#DCA15D] backdrop-blur-sm shadow-inner transition-all hover:bg-white/20">
               <MapPin className="w-3.5 h-3.5" />
               <span>{t.location}</span>
               <span className="text-[10px] opacity-70 ml-1 font-sans">
