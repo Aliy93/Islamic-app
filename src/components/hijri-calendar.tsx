@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { Separator } from './ui/separator';
 import { useSettings } from '@/context/settings-context';
-import { formatLocalizedGregorianDate, formatLocalizedHijriMonth, formatLocalizedNumber, getLocalizedWeekdayShortNames } from '@/lib/localization';
+import { formatLocalizedGregorianDate, formatLocalizedHijriMonthByNumber, formatLocalizedNumber, getLocalizedWeekdayShortNames } from '@/lib/localization';
 
 
 type CalendarDay = {
@@ -149,7 +149,7 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
 
   const getHijriHeader = () => {
       if (!firstCurrentMonthDay) return "";
-      return `${formatLocalizedHijriMonth(firstCurrentMonthDay.gregorian, lang)} ${formatLocalizedNumber(firstCurrentMonthDay.hijri.year, lang)}`;
+      return `${formatLocalizedHijriMonthByNumber(firstCurrentMonthDay.hijri.month, lang)} ${formatLocalizedNumber(firstCurrentMonthDay.hijri.year, lang)}`;
   };
   
   const getGregorianHeader = () => {
@@ -244,7 +244,7 @@ export default function HijriCalendar({ lang = 'en', currentHijriDate, setCurren
                                 <h3 className="font-bold text-foreground">{lang === 'ar' ? day.event!.nameAr : day.event!.name}</h3>
                                 <div className="flex justify-between items-center text-sm text-muted-foreground">
                                    <span>
-                                {`${formatLocalizedHijriMonth(day.gregorian, lang)} ${formatLocalizedNumber(day.hijri.day, lang)}, ${formatLocalizedNumber(day.hijri.year, lang)}`}
+                                {`${formatLocalizedHijriMonthByNumber(day.hijri.month, lang)} ${formatLocalizedNumber(day.hijri.day, lang)}, ${formatLocalizedNumber(day.hijri.year, lang)}`}
                                     </span>
                                     <span>
                                 {formatLocalizedGregorianDate(day.gregorian, lang, { day: 'numeric', month: 'long', year: 'numeric' })}

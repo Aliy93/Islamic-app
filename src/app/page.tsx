@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight, MapPin, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PrayerTimes from '@/components/prayer-times';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { formatLocalizedGregorianDate, formatLocalizedHijriMonth, formatLocalizedNumber } from '@/lib/localization';
+import { formatLocalizedGregorianDate, formatLocalizedHijriMonthByNumber, formatLocalizedNumber } from '@/lib/localization';
 import { findNextPrayer, getPrayerSchedule, getPrayerTimes, PrayerName, PrayerTimesData } from '@/lib/prayer-times';
 
 type Prayer = {
@@ -28,7 +28,7 @@ const IslamicCorner = ({ className }: { className?: string }) => (
 
 export default function Home() {
   const { lang } = useLanguage();
-  const { prayerMethod, location, locationError, fetchAndSetLocation, setIsManualLocation } = useSettings();
+  const { prayerMethod, location, locationError, fetchAndSetLocation, setIsManualLocation, hijriAdjustment } = useSettings();
   const t = translations[lang];
 
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -39,6 +39,7 @@ export default function Home() {
   const [hijriDate, setHijriDate] = useState<HijriDateInfo | null>(null);
   const [locationName, setLocationName] = useState<string | null>(null);
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimesData | null>(null);
+  const [prayerTimesLoading, setPrayerTimesLoading] = useState(true);
 
   useEffect(() => {
     // Hydration gate for time-sensitive client-only content.
@@ -47,9 +48,9 @@ export default function Home() {
 
   useEffect(() => {
     if (mounted) {
-      setHijriDate(getHijriDate(currentDate));
+      setHijriDate(getHijriDate(currentDate, hijriAdjustment));
     }
-  }, [currentDate, mounted]);
+  }, [currentDate, mounted, hijriAdjustment]);
 
   useEffect(() => {
     if (locationError) {
@@ -91,9 +92,19 @@ export default function Home() {
   }, [location, mounted]);
 
   useEffect(() => {
-    if (!location || !mounted) return;
+    if (!mounted) {
+      return;
+    }
+
+    if (!location) {
+      setPrayerTimes(null);
+      setNextPrayer(null);
+      setPrayerTimesLoading(false);
+      return;
+    }
 
     const fetchPrayerTimes = async () => {
+      setPrayerTimesLoading(true);
       try {
         const timings = await getPrayerTimes({
           date: currentDate,
@@ -104,8 +115,12 @@ export default function Home() {
         setPrayerTimes(timings);
         setError(null);
       } catch (err: unknown) {
+        setPrayerTimes(null);
+        setNextPrayer(null);
         const message = err instanceof Error ? err.message : t.fetchError;
         setError(message);
+      } finally {
+        setPrayerTimesLoading(false);
       }
     };
 
@@ -207,7 +222,7 @@ export default function Home() {
         <div className="text-center">
           <div className="text-xl font-bold text-foreground font-headline leading-tight">
             {mounted && hijriDate ? (
-                `${formatLocalizedHijriMonth(currentDate, lang)} ${formatLocalizedNumber(hijriDate.day, lang)}, ${formatLocalizedNumber(hijriDate.year, lang)} ${t.hijriEra}`
+                `${formatLocalizedHijriMonthByNumber(hijriDate.month, lang)} ${formatLocalizedNumber(hijriDate.day, lang)}, ${formatLocalizedNumber(hijriDate.year, lang)} ${t.hijriEra}`
             ) : <div className="h-7 w-32 bg-muted animate-pulse rounded mx-auto" />}
           </div>
           <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em] mt-1.5 flex justify-center">
@@ -254,7 +269,13 @@ export default function Home() {
           <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t.todayPrayerTimes}</h4>
           <div className="h-px bg-muted flex-grow" />
         </div>
-        <PrayerTimes currentDate={currentDate.getTime()} nextPrayerName={nextPrayer?.name} />
+        <PrayerTimes
+          currentDate={currentDate.getTime()}
+          nextPrayerName={nextPrayer?.name}
+          initialTimings={prayerTimes}
+          externalError={error}
+          externalLoading={prayerTimesLoading}
+        />
       </div>
     </div>
   );

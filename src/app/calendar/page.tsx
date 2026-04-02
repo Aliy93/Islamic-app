@@ -5,10 +5,12 @@ import { useState } from 'react';
 import HijriCalendar from '@/components/hijri-calendar';
 import CalendarHeader from '@/components/calendar-header';
 import AllIslamicEvents from '@/components/all-islamic-events';
+import { useSettings } from '@/context/settings-context';
 import { getHijriDate } from '@/lib/hijri';
 
 export default function CalendarPage() {
   const { lang } = useLanguage();
+  const { hijriAdjustment } = useSettings();
   const t = translations[lang];
   
   // The state for the calendar view is now managed here
@@ -18,7 +20,7 @@ export default function CalendarPage() {
   });
 
   const handleSetToday = () => {
-    const todayHijri = getHijriDate(new Date());
+    const todayHijri = getHijriDate(new Date(), hijriAdjustment);
     setCurrentHijriDate({ year: todayHijri.year, month: todayHijri.month });
   };
   

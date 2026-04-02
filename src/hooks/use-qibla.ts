@@ -313,8 +313,8 @@ export function useQibla() {
         const Xh = mx * Math.cos(pitch) + mz * Math.sin(pitch);
         const Yh = mx * Math.sin(roll) * Math.sin(pitch) + my * Math.cos(roll) - mz * Math.sin(roll) * Math.cos(pitch);
 
-        // Heading relative to magnetic north
-        let heading = (Math.atan2(Yh, Xh) * 180) / Math.PI;
+        // Heading relative to magnetic north (clockwise from north)
+        let heading = (Math.atan2(Xh, Yh) * 180) / Math.PI;
         heading = normalizeDeg(heading);
 
         // Adjust to screen orientation

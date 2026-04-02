@@ -33,6 +33,7 @@ type CachedPrayerData = {
 const PRAYER_CACHE_PREFIX = 'prayerData:';
 const PRIMARY_PRAYERS: PrayerName[] = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 const PRAYER_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const inFlightPrayerRequests = new Map<string, Promise<PrayerTimesData>>();
 const prayerTimeSchema = z.string().regex(/^\d{2}:\d{2}$/);
 const prayerTimesSchema = z.object({
   Fajr: prayerTimeSchema,
@@ -128,31 +129,46 @@ export async function getPrayerTimes(params: {
     return cachedData.timings;
   }
 
-  const timestamp = Math.floor(date.getTime() / 1000);
-  const response = await fetch(
-    `/api/prayer-times?timestamp=${timestamp}&latitude=${location.latitude}&longitude=${location.longitude}&method=${method}`,
-    {
-      cache: 'no-store',
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(fetchErrorMessage);
+  const existingRequest = inFlightPrayerRequests.get(cacheKey);
+  if (existingRequest) {
+    return existingRequest;
   }
 
-  const data = await response.json();
-  const rawTimings = prayerTimesSchema.parse(data.timings);
-  const timings = normalizePrayerTimes(rawTimings, fetchErrorMessage);
+  const requestPromise = (async () => {
+    const timestamp = Math.floor(date.getTime() / 1000);
+    const response = await fetch(
+      `/api/prayer-times?timestamp=${timestamp}&latitude=${location.latitude}&longitude=${location.longitude}&method=${method}`,
+      {
+        cache: 'no-store',
+      }
+    );
 
-  writePrayerCache(cacheKey, {
-    timings,
-    date: format(date, 'yyyy-MM-dd'),
-    location,
-    method,
-    cachedAt: Date.now(),
-  });
+    if (!response.ok) {
+      throw new Error(fetchErrorMessage);
+    }
 
-  return timings;
+    const data = await response.json();
+    const rawTimings = prayerTimesSchema.parse(data.timings);
+    const timings = normalizePrayerTimes(rawTimings, fetchErrorMessage);
+
+    writePrayerCache(cacheKey, {
+      timings,
+      date: format(date, 'yyyy-MM-dd'),
+      location,
+      method,
+      cachedAt: Date.now(),
+    });
+
+    return timings;
+  })();
+
+  inFlightPrayerRequests.set(cacheKey, requestPromise);
+
+  try {
+    return await requestPromise;
+  } finally {
+    inFlightPrayerRequests.delete(cacheKey);
+  }
 }
 
 export function getPrayerSchedule(timings: PrayerTimesData, includeSunrise: boolean = true): PrayerScheduleItem[] {

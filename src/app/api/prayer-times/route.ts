@@ -5,7 +5,21 @@ import { applySecurityHeaders, stripFingerprintingHeaders } from '@/lib/security
 
 const ALADHAN_API_BASE_URL = 'https://api.aladhan.com/v1/timings';
 const CACHE_CONTROL_HEADER = 'no-store';
+const ALADHAN_TIMEOUT_MS = 8000;
+const APP_USER_AGENT = 'Islamic-app/1.0';
 const isDev = process.env.NODE_ENV !== 'production';
+
+function buildAlAdhanHeaders(request: NextRequest) {
+  const requestOrigin = request.nextUrl.origin;
+  const acceptLanguage = request.headers.get('accept-language') ?? 'en';
+
+  return {
+    Accept: 'application/json',
+    'Accept-Language': acceptLanguage,
+    Referer: requestOrigin,
+    'User-Agent': `${APP_USER_AGENT} (${requestOrigin})`,
+  };
+}
 
 function buildErrorResponse(status: number, message: string) {
   const response = NextResponse.json(
@@ -22,6 +36,10 @@ function buildErrorResponse(status: number, message: string) {
   applySecurityHeaders(response.headers, isDev);
 
   return response;
+}
+
+function logUpstreamFailure(details: Record<string, unknown>) {
+  console.error('[prayer-times] upstream failure', details);
 }
 
 function parseFiniteNumber(value: string | null, min: number, max: number) {
@@ -64,12 +82,17 @@ export async function GET(request: NextRequest) {
   try {
     const upstreamResponse = await fetch(alAdhanUrl, {
       cache: 'no-store',
-      headers: {
-        Accept: 'application/json',
-      },
+      headers: buildAlAdhanHeaders(request),
+      signal: AbortSignal.timeout(ALADHAN_TIMEOUT_MS),
     });
 
     if (!upstreamResponse.ok) {
+      logUpstreamFailure({
+        status: upstreamResponse.status,
+        statusText: upstreamResponse.statusText,
+        timeoutMs: ALADHAN_TIMEOUT_MS,
+      });
+
       return buildErrorResponse(502, 'Prayer time lookup failed.');
     }
 
@@ -89,7 +112,17 @@ export async function GET(request: NextRequest) {
     applySecurityHeaders(jsonResponse.headers, isDev);
 
     return jsonResponse;
-  } catch {
+  } catch (error: unknown) {
+    const isTimeoutError = error instanceof Error && error.name === 'TimeoutError';
+    const isAbortError = error instanceof Error && error.name === 'AbortError';
+
+    logUpstreamFailure({
+      errorName: error instanceof Error ? error.name : 'UnknownError',
+      message: error instanceof Error ? error.message : 'Unknown prayer time lookup failure',
+      failureType: isTimeoutError || isAbortError ? 'timeout' : 'network',
+      timeoutMs: ALADHAN_TIMEOUT_MS,
+    });
+
     return buildErrorResponse(502, 'Prayer time lookup failed.');
   }
 }

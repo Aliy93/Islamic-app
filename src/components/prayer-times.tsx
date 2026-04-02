@@ -28,12 +28,23 @@ const prayerIcons: Record<keyof PrayerTimesData, React.ReactNode> = {
 interface PrayerTimesProps {
   currentDate?: number;
   nextPrayerName?: string;
+  initialTimings?: PrayerTimesData | null;
+  externalError?: string | null;
+  externalLoading?: boolean;
 }
 
-export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }: PrayerTimesProps) {
+export default function PrayerTimes({
+  currentDate: initialDate,
+  nextPrayerName,
+  initialTimings,
+  externalError,
+  externalLoading,
+}: PrayerTimesProps) {
   const { lang } = useLanguage();
   const { prayerMethod, location } = useSettings();
   const t = translations[lang];
+  const isExternallyManaged =
+    initialTimings !== undefined || externalError !== undefined || externalLoading !== undefined;
 
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimesData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +58,10 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
   }, [initialDate]);
 
   useEffect(() => {
+    if (isExternallyManaged) {
+      return;
+    }
+
     if (!location || !currentDate || !mounted) {
       return;
     }
@@ -71,9 +86,13 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
     };
 
     fetchPrayerTimes();
-  }, [location, currentDate, t.fetchError, prayerMethod, mounted]);
+  }, [location, currentDate, t.fetchError, prayerMethod, mounted, isExternallyManaged]);
 
-  if (!mounted || loading) {
+  const displayedPrayerTimes = isExternallyManaged ? initialTimings ?? null : prayerTimes;
+  const displayedError = isExternallyManaged ? externalError ?? null : error;
+  const displayedLoading = isExternallyManaged ? Boolean(externalLoading) : loading;
+
+  if (!mounted || displayedLoading) {
     return (
       <div className="space-y-3">
         {[...Array(6)].map((_, i) => (
@@ -83,16 +102,16 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
     );
   }
 
-  if (error) {
+  if (displayedError) {
     return (
       <Alert variant="destructive" className="rounded-2xl">
         <AlertTitle>Error</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
+        <AlertDescription>{displayedError}</AlertDescription>
       </Alert>
     );
   }
 
-  if (!prayerTimes) {
+  if (!displayedPrayerTimes) {
     return (
       <Alert className="rounded-2xl border-accent bg-accent/30">
         <AlertTitle className="font-bold">{t.locationNeeded}</AlertTitle>
@@ -101,9 +120,9 @@ export default function PrayerTimes({ currentDate: initialDate, nextPrayerName }
     );
   }
 
-  const prayerScheduleData = getPrayerSchedule(prayerTimes, true);
+  const prayerScheduleData = getPrayerSchedule(displayedPrayerTimes, true);
   const prayerSchedule: PrayerInfo[] = (Object.keys(prayerIcons) as Array<keyof PrayerTimesData>).map(name => {
-    const time24 = prayerScheduleData.find((prayer) => prayer.name === name)?.time ?? prayerTimes[name];
+    const time24 = prayerScheduleData.find((prayer) => prayer.name === name)?.time ?? displayedPrayerTimes[name];
     const beginsTime = parse(time24, 'HH:mm', new Date());
 
     return {

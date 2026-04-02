@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Language } from '@/context/language-context';
+import { useSettings } from '@/context/settings-context';
 import { islamicEvents } from '@/lib/islamic-events';
 import { getGregorianDateFromHijri } from '@/lib/hijri';
 import { formatLocalizedGregorianDate, formatLocalizedHijriMonthByNumber, formatLocalizedNumber } from '@/lib/localization';
@@ -20,6 +21,7 @@ interface AllIslamicEventsProps {
 
 export default function AllIslamicEvents({ lang, year }: AllIslamicEventsProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { hijriAdjustment } = useSettings();
   const t = translations[lang];
   const events = useMemo(() => {
     return [...islamicEvents]
@@ -32,9 +34,9 @@ export default function AllIslamicEvents({ lang, year }: AllIslamicEventsProps) 
       })
       .map((event) => ({
         ...event,
-        gregorianDate: getGregorianDateFromHijri(year, event.month, event.day),
+        gregorianDate: getGregorianDateFromHijri(year, event.month, event.day, hijriAdjustment),
       }));
-  }, [year]);
+  }, [year, hijriAdjustment]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>

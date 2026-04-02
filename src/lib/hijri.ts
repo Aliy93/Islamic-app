@@ -102,7 +102,7 @@ function findGregorianDateForHijriTarget(target: Pick<HijriDateInfo, 'year' | 'm
 
 export function getHijriDate(gregorianDate: Date, adjustment: number = 0): HijriDateInfo {
   // Apply adjustment to the Gregorian date before conversion
-  const adjustedDate = subDays(gregorianDate, adjustment);
+  const adjustedDate = addDays(gregorianDate, adjustment);
 
   const parts = getHijriParts(adjustedDate);
   const month = parseInt(parts.month, 10);
@@ -129,5 +129,5 @@ export function getGregorianDateFromHijri(year: number, month: number, day: numb
     gregorianFromHijriCache.set(cacheKey, baseDate.getTime());
   }
 
-  return addDays(baseDate, adjustment);
+  return subDays(baseDate, adjustment);
 }
