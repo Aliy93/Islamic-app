@@ -273,7 +273,8 @@ export function useQibla() {
         const Yh = mx * Math.sin(roll) * Math.sin(pitch) + my * Math.cos(roll) - mz * Math.sin(roll) * Math.cos(pitch);
 
         // Heading relative to magnetic north (clockwise from north)
-        let heading = (Math.atan2(Xh, Yh) * 180) / Math.PI;
+        // atan2(-Yh, Xh) gives clockwise-from-north heading
+        let heading = (Math.atan2(-Yh, Xh) * 180) / Math.PI;
         heading = normalizeDeg(heading);
 
         // Adjust to screen orientation
@@ -305,20 +306,32 @@ export function useQibla() {
       let hasUsableHeading = false;
       const timeoutId = window.setTimeout(() => {
         if (!cancelled && !hasUsableHeading) {
+          // Try generic sensors as a fallback before giving up
+          if (fallbackSupportRef.current === 'generic-sensors' && support !== 'generic-sensors') {
+            setSupport('generic-sensors');
+            return;
+          }
           fallbackOrFail('Unable to get an absolute compass heading on this device.');
         }
-      }, 2500);
+      }, 3000);
+
+      // Determine which event to listen to.
+      // Prefer deviceorientationabsolute (Android Chrome) — it provides true-north alpha.
+      const useAbsolute = 'ondeviceorientationabsolute' in window;
+      const eventName: string = useAbsolute ? 'deviceorientationabsolute' : 'deviceorientation';
 
       const onDO = (event: DeviceOrientationEvent) => {
         if (cancelled) return;
         let heading: number | null = null;
         let accuracy: number | null = null;
+        let ref: HeadingReference = 'unknown';
 
-        // iOS magnetic heading
+        // iOS magnetic heading (webkitCompassHeading)
         const eventWithCompass = event as unknown as { webkitCompassHeading?: number; webkitCompassAccuracy?: number };
         const webkitCompassHeading = eventWithCompass.webkitCompassHeading;
         const webkitCompassAccuracy = eventWithCompass.webkitCompassAccuracy;
-        if (typeof webkitCompassHeading === 'number') {
+
+        if (typeof webkitCompassHeading === 'number' && Number.isFinite(webkitCompassHeading)) {
           if (typeof webkitCompassAccuracy === 'number') {
             accuracy = webkitCompassAccuracy;
             setCompassAccuracy(webkitCompassAccuracy);
@@ -326,29 +339,43 @@ export function useQibla() {
               setNeedsCalibration(true);
             }
             if (webkitCompassAccuracy > 45) {
-              return;
+              return; // Too inaccurate — skip this reading
             }
           }
+          // iOS webkitCompassHeading is already clockwise from magnetic north
+          // and already compensated for screen orientation by the browser.
           heading = webkitCompassHeading;
-        } else if (event.alpha != null && (event.absolute || 'ondeviceorientationabsolute' in window)) {
+          ref = 'magnetic';
+        } else if (event.alpha != null) {
+          // Android / desktop: event.alpha is counter-clockwise from a reference.
+          // Only trust it as true-north if we are on the absolute event or event.absolute is true.
+          const isAbsolute = event.absolute === true || useAbsolute;
+          if (!isAbsolute) {
+            // Relative alpha (arbitrary origin) — unusable for compass.
+            return;
+          }
           setCompassAccuracy(null);
           heading = normalizeDeg(360 - (event.alpha as number));
+          ref = 'true';
         }
 
         if (heading != null) {
           hasUsableHeading = true;
           window.clearTimeout(timeoutId);
-          heading = normalizeDeg(heading + getScreenOrientationAngle());
+
+          // Apply screen orientation offset.
+          // iOS webkitCompassHeading is already screen-compensated, so skip for that path.
+          if (ref !== 'magnetic' || typeof webkitCompassHeading !== 'number') {
+            heading = normalizeDeg(heading + getScreenOrientationAngle());
+          }
+
           setError(null);
-          setHeading(heading, typeof webkitCompassHeading === 'number' ? 'magnetic' : 'true');
+          setHeading(heading, ref);
           if (accuracy != null && accuracy <= 25) {
             setNeedsCalibration(false);
           }
         }
       };
-
-      const eventName: 'deviceorientationabsolute' | 'deviceorientation' =
-        'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
 
       window.addEventListener(eventName, onDO as unknown as EventListener);
       cleanupFns.push(() => {
