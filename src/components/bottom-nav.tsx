@@ -23,7 +23,7 @@ function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] will-change-transform"
     >
       <div className="pointer-events-auto w-full max-w-md rounded-t-[28px] border border-border/50 border-b-0 bg-background/95 shadow-[0_-10px_30px_rgba(11,85,43,0.08)] supports-[backdrop-filter]:bg-background/90 supports-[backdrop-filter]:backdrop-blur-lg">
         <div className="flex h-20 items-center justify-around px-4">

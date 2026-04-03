@@ -9,7 +9,7 @@ export default function QiblaPage() {
   const t = translations[lang];
 
   return (
-    <div className="brand-page-gradient flex min-h-[100dvh] flex-col" dir={isRtlLanguage(lang) ? 'rtl' : 'ltr'}>
+    <div className="brand-page-gradient flex h-[100dvh] flex-col overflow-y-auto overflow-x-hidden" dir={isRtlLanguage(lang) ? 'rtl' : 'ltr'}>
       <header className="sticky top-0 z-10 border-b border-primary/10 bg-background/80 backdrop-blur-xl">
         <div className="px-4 py-2.5">
           <div className="mx-auto flex max-w-md items-center gap-2.5">
