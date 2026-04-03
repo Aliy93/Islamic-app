@@ -58,7 +58,7 @@ export default function Home() {
     }
   }, [locationError]);
 
-  // Reverse Geocoding to get City, Country
+  // Reverse Geocoding to get City, Country (direct client-side call)
   useEffect(() => {
     if (!location || !mounted) return;
 
@@ -66,17 +66,32 @@ export default function Home() {
 
     const fetchLocationName = async () => {
       try {
-        const response = await fetch(
-          `/api/reverse-geocode?lat=${location.latitude}&lon=${location.longitude}`,
-          {
-            cache: 'no-store',
-            signal: abortController.signal,
-          }
-        );
+        const url = new URL('https://nominatim.openstreetmap.org/reverse');
+        url.searchParams.set('format', 'jsonv2');
+        url.searchParams.set('addressdetails', '1');
+        url.searchParams.set('lat', location.latitude.toString());
+        url.searchParams.set('lon', location.longitude.toString());
+
+        const response = await fetch(url, {
+          cache: 'no-store',
+          headers: {
+            Accept: 'application/json',
+          },
+          signal: abortController.signal,
+        });
         if (!response.ok) return;
 
         const data = await response.json();
-        setLocationName(data.label ?? null);
+        const address = data?.address;
+        if (!address) return;
+
+        const locality = address.city || address.town || address.village || address.suburb || address.state_district;
+        const country = address.country;
+        if (locality && country) {
+          setLocationName(`${locality}, ${country}`);
+        } else if (country) {
+          setLocationName(country);
+        }
       } catch (error: unknown) {
         if (error instanceof DOMException && error.name === 'AbortError') {
           return;
@@ -103,28 +118,22 @@ export default function Home() {
       return;
     }
 
-    const fetchPrayerTimes = async () => {
-      setPrayerTimesLoading(true);
-      try {
-        const timings = await getPrayerTimes({
-          date: currentDate,
-          location,
-          method: prayerMethod,
-          fetchErrorMessage: t.fetchError,
-        });
-        setPrayerTimes(timings);
-        setError(null);
-      } catch (err: unknown) {
-        setPrayerTimes(null);
-        setNextPrayer(null);
-        const message = err instanceof Error ? err.message : t.fetchError;
-        setError(message);
-      } finally {
-        setPrayerTimesLoading(false);
-      }
-    };
-
-    fetchPrayerTimes();
+    setPrayerTimesLoading(true);
+    try {
+      const timings = getPrayerTimes({
+        date: currentDate,
+        location,
+        method: prayerMethod,
+      });
+      setPrayerTimes(timings);
+      setError(null);
+    } catch {
+      setPrayerTimes(null);
+      setNextPrayer(null);
+      setError(t.fetchError);
+    } finally {
+      setPrayerTimesLoading(false);
+    }
 
   }, [location, currentDate, t.fetchError, prayerMethod, mounted]);
 

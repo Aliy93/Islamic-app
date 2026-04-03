@@ -66,26 +66,20 @@ export default function PrayerTimes({
       return;
     }
 
-    const fetchPrayerTimes = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const timings = await getPrayerTimes({
-          date: currentDate,
-          location,
-          method: prayerMethod,
-          fetchErrorMessage: t.fetchError,
-        });
-        setPrayerTimes(timings);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t.fetchError;
-        setError(message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPrayerTimes();
+    setLoading(true);
+    setError(null);
+    try {
+      const timings = getPrayerTimes({
+        date: currentDate,
+        location,
+        method: prayerMethod,
+      });
+      setPrayerTimes(timings);
+    } catch {
+      setError(t.fetchError);
+    } finally {
+      setLoading(false);
+    }
   }, [location, currentDate, t.fetchError, prayerMethod, mounted, isExternallyManaged]);
 
   const displayedPrayerTimes = isExternallyManaged ? initialTimings ?? null : prayerTimes;

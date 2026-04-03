@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSettings } from '@/context/settings-context';
 import { calculateQibla, circularStdDevDeg, smoothCompass } from '@/lib/qibla';
+import { model } from 'geomagnetism';
 
 type PermissionState = 'prompt' | 'granted' | 'denied';
 type CompassSupport = 'generic-sensors' | 'deviceorientation' | 'none';
@@ -91,7 +92,6 @@ export function useQibla() {
   const [support, setSupport] = useState<CompassSupport>('none');
   const [deviceHeading, setDeviceHeading] = useState<number>(0);
   const [headingReference, setHeadingReference] = useState<HeadingReference>('unknown');
-  const [magneticDeclination, setMagneticDeclination] = useState<number>(0);
   const [isCompassActive, setIsCompassActive] = useState(false);
   const [needsCalibration, setNeedsCalibration] = useState(false);
   const [compassAccuracy, setCompassAccuracy] = useState<number | null>(null);
@@ -107,68 +107,25 @@ export function useQibla() {
     return calculateQibla(location.latitude, location.longitude);
   }, [location]);
 
-  useEffect(() => {
-    if (!location) {
-      setMagneticDeclination(0);
-      return;
-    }
+  const magneticDeclination = useMemo(() => {
+    if (!location) return 0;
 
     const cacheKey = buildDeclinationCacheKey(location.latitude, location.longitude);
     const cachedDeclination = readCachedDeclination(cacheKey);
+    if (cachedDeclination !== null) return cachedDeclination;
 
-    if (cachedDeclination !== null) {
-      setMagneticDeclination(cachedDeclination);
-      return;
+    try {
+      const declination = model(new Date(), { allowOutOfBoundsModel: true }).point([location.latitude, location.longitude]).decl;
+
+      if (typeof declination === 'number' && Number.isFinite(declination)) {
+        writeCachedDeclination(cacheKey, declination);
+        return declination;
+      }
+    } catch {
+      // Fall through to return 0
     }
 
-    let cancelled = false;
-    const abortController = new AbortController();
-
-    const loadDeclination = async () => {
-      try {
-        const url = new URL('/api/declination', window.location.origin);
-        url.searchParams.set('lat', location.latitude.toString());
-        url.searchParams.set('lon', location.longitude.toString());
-
-        const response = await fetch(url, {
-          cache: 'no-store',
-          signal: abortController.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error('Declination lookup failed.');
-        }
-
-        const payload = (await response.json()) as { declination?: unknown };
-        const declination = typeof payload.declination === 'number' ? payload.declination : null;
-        if (declination === null || !Number.isFinite(declination)) {
-          throw new Error('Declination lookup returned an invalid value.');
-        }
-
-        if (cancelled) {
-          return;
-        }
-
-        setMagneticDeclination(declination);
-        writeCachedDeclination(cacheKey, declination);
-      } catch (loadError: unknown) {
-        if (cancelled) {
-          return;
-        }
-
-        const isAbortError = loadError instanceof Error && loadError.name === 'AbortError';
-        if (!isAbortError) {
-          setMagneticDeclination(0);
-        }
-      }
-    };
-
-    void loadDeclination();
-
-    return () => {
-      cancelled = true;
-      abortController.abort();
-    };
+    return 0;
   }, [location]);
 
   const appliedDeclination = useMemo(() => {
@@ -203,6 +160,7 @@ export function useQibla() {
     // On phones, prefer the browser-normalized orientation APIs first.
     fallbackSupportRef.current = hasDO && hasGeneric ? 'generic-sensors' : 'none';
     // This effect initializes capability state from browser APIs during mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSupport(hasDO ? 'deviceorientation' : hasGeneric ? 'generic-sensors' : 'none');
 
     // On most browsers, there is no explicit permission prompt for orientation.
@@ -266,6 +224,7 @@ export function useQibla() {
 
     let cancelled = false;
     // Reset live sensor state when starting or restarting listeners.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsCompassActive(false);
     setHeadingReference('unknown');
     setCompassAccuracy(null);
